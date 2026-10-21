@@ -1,0 +1,14 @@
+# Hasil build
+dist/
+build/bin/
+build/windows/installer/tmp/
+frontend/wailsjs/
+
+# Log dan data lokal
+*.log
+*.db
+*.db-wal
+*.db-shm
+
+# Catatan sementara
+draft.md
