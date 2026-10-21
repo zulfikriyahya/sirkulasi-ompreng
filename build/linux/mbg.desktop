@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=MBG Pencatatan Ompreng
+Exec=/usr/bin/mbg
+Icon=mbg
+Type=Application
+Categories=Office;
+Terminal=false

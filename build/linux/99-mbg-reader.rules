@@ -1,0 +1,2 @@
+# Reader RFID ESP32-C3 (Espressif) bisa diakses semua pengguna
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", MODE="0666"

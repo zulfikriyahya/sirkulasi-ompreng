@@ -1,0 +1,36 @@
+name: mbg
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: misc
+maintainer: Yahya Zulfikri <https://zulfikriyahya.my.id>
+description: Aplikasi pencatatan pengambilan dan pengembalian ompreng MBG
+homepage: https://zulfikriyahya.my.id
+contents:
+  - src: dist/mbg-linux-amd64
+    dst: /usr/bin/mbg
+    file_info:
+      mode: 0755
+  - src: build/linux/mbg.desktop
+    dst: /usr/share/applications/mbg.desktop
+    file_info:
+      mode: 0644
+  - src: build/linux/mbg.png
+    dst: /usr/share/icons/hicolor/512x512/apps/mbg.png
+    file_info:
+      mode: 0644
+  - src: build/linux/99-mbg-reader.rules
+    dst: /etc/udev/rules.d/99-mbg-reader.rules
+    file_info:
+      mode: 0644
+scripts:
+  postinstall: build/linux/postinst.sh
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0
+      - libwebkit2gtk-4.1-0
+  rpm:
+    depends:
+      - gtk3
+      - webkit2gtk4.1

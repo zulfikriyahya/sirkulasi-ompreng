@@ -1,0 +1,8 @@
+{
+    "$schema": "https://wails.io/schemas/config.v2.json",
+    "name": "mbg",
+    "outputfilename": "mbg",
+    "frontend:dir": "frontend",
+    "assetdir": "frontend",
+    "build:tags": "webkit2_41"
+}

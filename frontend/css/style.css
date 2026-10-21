@@ -1,0 +1,577 @@
+:root {
+    --hijau: #15803d;
+    --hijau-tua: #14532d;
+    --hijau-muda: #dcfce7;
+    --merah: #b91c1c;
+    --merah-muda: #ffe4e6;
+    --merah-teks: #9f1239;
+    --teks: #0f172a;
+    --redup: #64748b;
+    --garis: #e2e8f0;
+    --latar: #f1f5f9;
+    --putih: #fff;
+    --radius: 10px;
+}
+
+* {
+    box-sizing: border-box
+}
+
+html,
+body {
+    height: 100%
+}
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--teks);
+    background: var(--latar);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Header ---------- */
+header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 24px;
+    min-height: 58px;
+    background: var(--putih);
+    border-bottom: 1px solid var(--garis);
+    border-top: 4px solid var(--hijau);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--hijau-tua);
+}
+
+header h1 span {
+    font-weight: 400;
+    color: var(--redup);
+    margin-left: 4px
+}
+
+header nav {
+    display: flex;
+    gap: 2px;
+    align-self: stretch
+}
+
+header nav button {
+    background: transparent;
+    color: var(--redup);
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+header nav button:hover {
+    color: var(--teks);
+    background: transparent
+}
+
+header nav button.aktif {
+    color: var(--hijau-tua);
+    border-bottom-color: var(--hijau);
+    font-weight: 600
+}
+
+#status-reader {
+    font-weight: 500
+}
+
+#info-tanggal {
+    margin-left: auto;
+    font-weight: 600;
+    color: var(--teks)
+}
+
+/* ---------- Layout ---------- */
+main {
+    flex: 1;
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.tab,
+.sub {
+    display: none
+}
+
+.tab.aktif,
+.sub.aktif {
+    display: block
+}
+
+/* ---------- Tabel ---------- */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--putih);
+    border: 1px solid var(--garis);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--garis);
+}
+
+th {
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--redup);
+    white-space: nowrap;
+}
+
+tbody tr:last-child td {
+    border-bottom: 0
+}
+
+tbody tr:hover td {
+    background: #f8fafc
+}
+
+tr.selesai td {
+    background: var(--hijau-muda)
+}
+
+tr.merah td {
+    background: var(--merah-muda);
+    color: var(--merah-teks)
+}
+
+tr.selesai:hover td {
+    background: #cdf7da
+}
+
+tr.merah:hover td {
+    background: #ffd5da
+}
+
+#ringkasan {
+    margin: 12px 2px;
+    color: var(--redup);
+    font-weight: 500
+}
+
+/* ---------- Form ---------- */
+.bar,
+.form-baris {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+
+label {
+    display: block;
+    margin: 12px 0;
+    font-weight: 500;
+    color: var(--teks)
+}
+
+.form-baris label {
+    margin: 0
+}
+
+label input {
+    display: block;
+    width: 440px;
+    max-width: 100%;
+    margin-top: 5px;
+}
+
+.form-baris label input {
+    width: auto
+}
+
+label.cek {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+    margin: 6px 0 14px
+}
+
+label.cek input {
+    display: inline-block;
+    width: auto;
+    margin: 0
+}
+
+input,
+select {
+    padding: 8px 10px;
+    font: inherit;
+    color: var(--teks);
+    background: var(--putih);
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--hijau);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, .18);
+}
+
+button {
+    padding: 8px 16px;
+    font: inherit;
+    font-weight: 500;
+    color: var(--teks);
+    background: var(--putih);
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+button:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8
+}
+
+button.utama,
+#btn-cetak,
+#in-ok,
+#um-ok,
+#kf-ya {
+    color: #fff;
+    background: var(--hijau);
+    border-color: var(--hijau);
+}
+
+button.utama:hover:not(:disabled),
+#btn-cetak:hover:not(:disabled),
+#in-ok:hover:not(:disabled),
+#um-ok:hover:not(:disabled),
+#kf-ya:hover:not(:disabled) {
+    background: var(--hijau-tua);
+    border-color: var(--hijau-tua);
+}
+
+button:disabled {
+    opacity: .45;
+    cursor: not-allowed
+}
+
+.subnav {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 14px;
+    background: #e2e8f0;
+    border-radius: 10px
+}
+
+.subnav button {
+    border: 0;
+    background: transparent;
+    padding: 6px 14px
+}
+
+.subnav button.aktif {
+    background: var(--putih);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .1)
+}
+
+#r-btn-trx.aktif,
+#r-btn-audit.aktif {
+    font-weight: 600;
+    background: var(--hijau-muda);
+    border-color: var(--hijau);
+    color: var(--hijau-tua);
+}
+
+.kecil {
+    font-size: 12px;
+    color: var(--redup)
+}
+
+.hidden {
+    display: none !important
+}
+
+.sim {
+    margin-top: 24px;
+    padding: 10px 14px;
+    background: var(--putih);
+    border: 1px dashed #94a3b8;
+    border-radius: var(--radius);
+}
+
+.sim summary {
+    cursor: pointer;
+    color: var(--redup);
+    font-weight: 500
+}
+
+.sim input,
+.sim button {
+    margin: 10px 6px 0 0
+}
+
+#tabel-audit td {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+/* ---------- Toast ---------- */
+#toast {
+    position: fixed;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 26px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .25);
+    z-index: 20;
+}
+
+#toast.ok {
+    background: #15803d
+}
+
+#toast.err {
+    background: #b91c1c
+}
+
+#toast.info {
+    background: #1d4ed8
+}
+
+/* ---------- Modal ---------- */
+#modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, .55);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+}
+
+.kotak {
+    min-width: 400px;
+    max-width: 92vw;
+    padding: 28px;
+    background: var(--putih);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, .35);
+}
+
+.kotak h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    letter-spacing: -.01em
+}
+
+.kotak p {
+    margin: 6px 0 14px;
+    color: var(--redup)
+}
+
+.kotak input#in-jumlah,
+.kotak input#um {
+    width: 100%;
+    padding: 12px;
+    font-size: 30px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.kotak .galat {
+    min-height: 22px;
+    margin: 8px 0;
+    color: var(--merah);
+    font-weight: 500
+}
+
+.kotak .aksi {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px
+}
+
+#modal label {
+    display: block;
+    margin: .5rem 0
+}
+
+#modal label input,
+#modal label select {
+    display: block;
+    width: 100%;
+    margin-top: 4px
+}
+
+/* ---------- Footer ---------- */
+footer {
+    padding: 14px 24px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--redup);
+    border-top: 1px solid var(--garis);
+    background: var(--putih);
+}
+
+footer a {
+    color: var(--hijau-tua);
+    font-weight: 600;
+    text-decoration: none
+}
+
+footer a:hover {
+    text-decoration: underline
+}
+
+footer .hati {
+    color: #e11d48
+}
+
+/* ---------- Tombol aksi ---------- */
+.bar-beranda {
+    justify-content: space-between;
+    align-items: center
+}
+
+.bar-beranda .grup {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap
+}
+
+td.aksi-sel {
+    width: 1%;
+    white-space: nowrap
+}
+
+.aksi-baris {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px
+}
+
+.aksi-baris button {
+    padding: 4px 12px;
+    font-size: 13px
+}
+
+button.bahaya {
+    color: var(--merah);
+    border-color: #fca5a5
+}
+
+button.bahaya:hover:not(:disabled) {
+    background: #fee2e2;
+    border-color: var(--merah)
+}
+
+#h-ok,
+#t-ok {
+    color: #fff;
+    background: var(--merah);
+    border-color: var(--merah)
+}
+
+#h-ok:hover:not(:disabled),
+#t-ok:hover:not(:disabled) {
+    background: #991b1b;
+    border-color: #991b1b
+}
+
+#e-ok,
+#b-ok {
+    color: #fff;
+    background: var(--hijau);
+    border-color: var(--hijau)
+}
+
+#e-ok:hover:not(:disabled),
+#b-ok:hover:not(:disabled) {
+    background: var(--hijau-tua);
+    border-color: var(--hijau-tua)
+}
+
+/* Form Instansi: lebar rapi, tombol sejajar */
+#sub-instansi {
+    max-width: 640px;
+    padding: 20px 24px;
+    background: var(--putih);
+    border: 1px solid var(--garis);
+    border-radius: var(--radius)
+}
+
+#sub-instansi label input {
+    width: 100%
+}
+
+#sub-instansi .form-baris {
+    align-items: center;
+    margin: 16px 0
+}
+
+#sub-instansi .form-baris .kecil {
+    margin-right: auto
+}
+
+#p-simpan {
+    min-width: 120px
+}
+
+/* Form kelas & kartu */
+#sub-kelas .form-baris input,
+#sub-kartu .form-baris input,
+#sub-kartu .form-baris select {
+    min-width: 200px
+}
+
+#sub-kelas .form-baris input[type=number] {
+    min-width: 0
+}
+
+/* Modal: tombol seragam */
+.kotak .aksi button {
+    min-width: 90px
+}
+
+.kotak label {
+    margin: 12px 0
+}
