@@ -4,6 +4,7 @@ Aplikasi desktop offline untuk mencatat pengambilan dan pengembalian ompreng Mak
 
 Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debian/Ubuntu, Red Hat/Fedora).
 
+![Icon](icon.jpeg)
 ## Fitur
 
 - Tap kartu: pengambilan pada tap pertama, pengembalian pada tap berikutnya
