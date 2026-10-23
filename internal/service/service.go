@@ -44,7 +44,7 @@ type InfoSistem struct {
 	DataDir string `json:"data_dir"`
 }
 
-func (s *Service) InfoSistem() InfoSistem { return InfoSistem{Versi: "0.1.0-stable", DataDir: s.dir} }
+func (s *Service) InfoSistem() InfoSistem { return InfoSistem{Versi: "0.1.1-stable", DataDir: s.dir} }
 
 func js(v any) string {
 	if v == nil {

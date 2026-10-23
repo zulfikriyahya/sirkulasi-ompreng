@@ -22,8 +22,8 @@ Unduh berkas dari folder `dist/`.
 | OS | Berkas | Cara pasang |
 |---|---|---|
 | Windows 10/11 | `mbg-amd64-installer.exe` | Jalankan installer |
-| Debian/Ubuntu | `mbg_0.1.0_amd64.deb` | `sudo apt install ./mbg_0.1.0_amd64.deb` |
-| Fedora/RHEL 10 | `mbg-0.1.0-1.x86_64.rpm` | `sudo dnf install ./mbg-0.1.0-1.x86_64.rpm` |
+| Debian/Ubuntu | `mbg_0.1.1_amd64.deb` | `sudo apt install ./mbg_0.1.1_amd64.deb` |
+| Fedora/RHEL 10 | `mbg-0.1.1-1.x86_64.rpm` | `sudo dnf install ./mbg-0.1.1-1.x86_64.rpm` |
 
 Paket Linux memasang dependensi (GTK3 dan WebKitGTK 4.1) otomatis dan menyertakan aturan udev agar reader bisa diakses tanpa grup `dialout`. Cabut dan colok ulang reader setelah instalasi.
 
@@ -97,7 +97,7 @@ Build semua target:
 ```bash
 go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
-export VERSION=0.1.0
+export VERSION=0.1.1
 
 wails build -clean
 cp build/bin/mbg dist/mbg-linux-amd64
@@ -109,7 +109,7 @@ nfpm package -p deb -t dist/
 nfpm package -p rpm -t dist/
 ```
 
-Hasil di `dist/`: `mbg-linux-amd64`, `mbg_0.1.0_amd64.deb`, `mbg-0.1.0-1.x86_64.rpm`, `mbg-amd64-installer.exe`.
+Hasil di `dist/`: `mbg-linux-amd64`, `mbg_0.1.1_amd64.deb`, `mbg-0.1.1-1.x86_64.rpm`, `mbg-amd64-installer.exe`.
 
 Catatan: `nfpm.yaml` mengambil binary Linux dari `dist/mbg-linux-amd64`, jadi build Linux harus dijalankan lebih dulu. `.rpm` dari Debian 13 menautkan glibc baru, sehingga tidak cocok untuk RHEL/Rocky 9; bangun di container Rocky 9 untuk target itu.
 
