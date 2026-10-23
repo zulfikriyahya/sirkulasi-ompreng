@@ -141,7 +141,7 @@ func (s *Service) NonaktifkanKelas(id int64, alasan string) error {
 // ---------- Kartu ----------
 
 func (s *Service) ListKartu(kelasID int64) ([]model.Kartu, error) {
-	rows, err := s.db.Query(`SELECT uid,kelas_id,aktif FROM kartu WHERE kelas_id=? ORDER BY uid`, kelasID)
+	rows, err := s.db.Query(`SELECT uid,kelas_id,aktif,COALESCE(nisn,''),COALESCE(nama_siswa,'') FROM kartu WHERE kelas_id=? ORDER BY nama_siswa,uid`, kelasID)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (s *Service) ListKartu(kelasID int64) ([]model.Kartu, error) {
 	for rows.Next() {
 		var k model.Kartu
 		var a int
-		if err := rows.Scan(&k.UID, &k.KelasID, &a); err != nil {
+		if err := rows.Scan(&k.UID, &k.KelasID, &a, &k.NISN, &k.NamaSiswa); err != nil {
 			return nil, err
 		}
 		k.Aktif = a == 1
@@ -159,11 +159,12 @@ func (s *Service) ListKartu(kelasID int64) ([]model.Kartu, error) {
 	return out, rows.Err()
 }
 
-func (s *Service) DaftarkanKartu(uid string, kelasID int64) error {
+func (s *Service) DaftarkanKartu(uid string, kelasID int64, nisn, nama string) error {
 	u, ok := reader.NormalisasiUID(uid)
 	if !ok {
 		return errors.New("UID tidak valid (harus 1-10 digit angka)")
 	}
+	nisn, nama = strings.TrimSpace(nisn), strings.TrimSpace(nama)
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -173,10 +174,10 @@ func (s *Service) DaftarkanKartu(uid string, kelasID int64) error {
 	if err := tx.QueryRow(`SELECT k.nama FROM kartu c JOIN kelas k ON k.id=c.kelas_id WHERE c.uid=?`, u).Scan(&namaKelas); err == nil {
 		return errors.New("Kartu " + u + " sudah terdaftar untuk kelas " + namaKelas)
 	}
-	if _, err := tx.Exec(`INSERT INTO kartu (uid,kelas_id) VALUES (?,?)`, u, kelasID); err != nil {
+	if _, err := tx.Exec(`INSERT INTO kartu (uid,kelas_id,nisn,nama_siswa) VALUES (?,?,?,?)`, u, kelasID, nisn, nama); err != nil {
 		return err
 	}
-	if err := s.audit(tx, s.now(), "TAMBAH", "kartu", u, nil, map[string]any{"kelas_id": kelasID}, ""); err != nil {
+	if err := s.audit(tx, s.now(), "TAMBAH", "kartu", u, nil, map[string]any{"kelas_id": kelasID, "nisn": nisn, "nama": nama}, ""); err != nil {
 		return err
 	}
 	return tx.Commit()

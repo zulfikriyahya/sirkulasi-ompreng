@@ -44,7 +44,42 @@ func Migrate(conn *sql.DB) error {
 	if _, err := conn.Exec(schema); err != nil {
 		return err
 	}
+	for _, k := range []struct{ tabel, kolom string }{
+		{"kartu", "nisn"}, {"kartu", "nama_siswa"},
+		{"transaksi", "nisn_ambil"}, {"transaksi", "nama_ambil"},
+		{"transaksi", "nisn_kembali"}, {"transaksi", "nama_kembali"},
+	} {
+		if err := tambahKolom(conn, k.tabel, k.kolom); err != nil {
+			return err
+		}
+	}
 	_, err := conn.Exec(`INSERT OR IGNORE INTO pengaturan (id, jabatan_penanggung_jawab) VALUES (1, 'Penanggung Jawab MBG')`)
+	return err
+}
+
+func tambahKolom(conn *sql.DB, tabel, kolom string) error {
+	rows, err := conn.Query(fmt.Sprintf(`PRAGMA table_info(%s)`, tabel))
+	if err != nil {
+		return err
+	}
+	ada := false
+	for rows.Next() {
+		var cid, notnull, pk int
+		var nama, tipe string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &nama, &tipe, &notnull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		if nama == kolom {
+			ada = true
+		}
+	}
+	rows.Close()
+	if ada {
+		return nil
+	}
+	_, err = conn.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s TEXT`, tabel, kolom))
 	return err
 }
 

@@ -28,7 +28,7 @@ func Excel(l Laporan, path string) error {
 	if err := f.SetSheetName("Sheet1", sh); err != nil {
 		return err
 	}
-	lebar := []float64{6, 10, 30, 20, 18, 20, 13, 14, 36}
+	lebar := []float64{6, 10, 28, 28, 28, 13, 14, 14, 10, 10, 32}
 	for i, w := range lebar {
 		c, _ := excelize.ColumnNumberToName(i + 1)
 		_ = f.SetColWidth(sh, c, c, w)
@@ -55,21 +55,21 @@ func Excel(l Laporan, path string) error {
 	sTtdNama := st(&excelize.Style{Font: &excelize.Font{Bold: true, Underline: "single"}, Alignment: al("center")})
 
 	// Kop surat: baris 1 logo (tengah), 2 nama, 3 alamat, 4 garis, 5 judul, 6 periode
-	_ = f.MergeCell(sh, "A1", "I1")
-	_ = f.MergeCell(sh, "A2", "I2")
+	_ = f.MergeCell(sh, "A1", "K1")
+	_ = f.MergeCell(sh, "A2", "K2")
 	_ = f.SetCellValue(sh, "A2", l.NamaInstansi)
-	_ = f.SetCellStyle(sh, "A2", "I2", sNama)
-	_ = f.MergeCell(sh, "A3", "I3")
+	_ = f.SetCellStyle(sh, "A2", "K2", sNama)
+	_ = f.MergeCell(sh, "A3", "K3")
 	_ = f.SetCellValue(sh, "A3", l.Alamat)
-	_ = f.SetCellStyle(sh, "A3", "I3", sAlamat)
-	_ = f.MergeCell(sh, "A4", "I4")
-	_ = f.SetCellStyle(sh, "A4", "I4", sGaris)
-	_ = f.MergeCell(sh, "A5", "I5")
+	_ = f.SetCellStyle(sh, "A3", "K3", sAlamat)
+	_ = f.MergeCell(sh, "A4", "K4")
+	_ = f.SetCellStyle(sh, "A4", "K4", sGaris)
+	_ = f.MergeCell(sh, "A5", "K5")
 	_ = f.SetCellValue(sh, "A5", JudulLaporan)
-	_ = f.SetCellStyle(sh, "A5", "I5", sJudul)
-	_ = f.MergeCell(sh, "A6", "I6")
+	_ = f.SetCellStyle(sh, "A5", "K5", sJudul)
+	_ = f.MergeCell(sh, "A6", "K6")
 	_ = f.SetCellValue(sh, "A6", l.Periode)
-	_ = f.SetCellStyle(sh, "A6", "I6", sPeriode)
+	_ = f.SetCellStyle(sh, "A6", "K6", sPeriode)
 	_ = f.SetRowHeight(sh, 1, 58)
 	_ = f.SetRowHeight(sh, 2, 24)
 	_ = f.SetRowHeight(sh, 3, 30)
@@ -102,8 +102,8 @@ func Excel(l Laporan, path string) error {
 
 	// Header tabel (baris 8)
 	const hr = 8
-	heads := []string{"No.", "Kelas", "Nama Ketua Murid", "Tanggal", "Waktu Pengambilan", "Waktu Pengembalian",
-		"Jumlah Ambil", "Jumlah Kembali", "Keterangan"}
+	heads := []string{"No.", "Kelas", "Nama Ketua Murid", "Nama Pengambil", "Nama Pengembali", "Tanggal",
+		"Waktu Pengambilan", "Waktu Pengembalian", "Jumlah Ambil", "Jumlah Kembali", "Keterangan"}
 	for i, h := range heads {
 		c, _ := excelize.CoordinatesToCellName(i+1, hr)
 		_ = f.SetCellValue(sh, c, h)
@@ -113,16 +113,16 @@ func Excel(l Laporan, path string) error {
 
 	for i, b := range l.Baris {
 		r := hr + 1 + i
-		vals := []string{strconv.Itoa(i + 1), b.Kelas, b.Ketua, b.Tanggal, b.WaktuAmbil, b.WaktuKembali,
+		vals := []string{strconv.Itoa(i + 1), b.Kelas, b.Ketua, b.Pengambil, b.Pengembali, b.Tanggal, b.WaktuAmbil, b.WaktuKembali,
 			b.JumlahAmbil, b.JumlahKembali, b.Keterangan}
 		for c, v := range vals {
 			cell, _ := excelize.CoordinatesToCellName(c+1, r)
-			if n, err := strconv.Atoi(v); err == nil && (c == 0 || c == 6 || c == 7) {
+			if n, err := strconv.Atoi(v); err == nil && (c == 0 || c == 8 || c == 9) {
 				_ = f.SetCellValue(sh, cell, n)
 			} else {
 				_ = f.SetCellValue(sh, cell, v)
 			}
-			kiri := c == 2 || c == 8
+			kiri := c == 2 || c == 3 || c == 4 || c == 10
 			s := sTengah
 			switch {
 			case kiri && b.Merah:
@@ -149,8 +149,8 @@ func Excel(l Laporan, path string) error {
 	}
 	for i, t := range ttd {
 		r := r0 + i
-		a, _ := excelize.CoordinatesToCellName(7, r)
-		z, _ := excelize.CoordinatesToCellName(9, r)
+		a, _ := excelize.CoordinatesToCellName(9, r)
+		z, _ := excelize.CoordinatesToCellName(11, r)
 		_ = f.MergeCell(sh, a, z)
 		_ = f.SetCellValue(sh, a, t.teks)
 		_ = f.SetCellStyle(sh, a, z, t.s)

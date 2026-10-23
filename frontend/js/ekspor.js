@@ -17,7 +17,7 @@ const Ekspor = {
             rows.forEach((b, i) => {
                 const tr = document.createElement("tr");
                 if (b.merah) tr.className = "merah";
-                [i + 1, b.kelas, b.ketua, b.tanggal, b.waktu_ambil, b.waktu_kembali, b.jumlah_ambil, b.jumlah_kembali, b.keterangan].forEach(t => {
+                [i + 1, b.kelas, b.ketua, b.pengambil, b.pengembali, b.tanggal, b.waktu_ambil, b.waktu_kembali, b.jumlah_ambil, b.jumlah_kembali, b.keterangan].forEach(t => {
                     const td = document.createElement("td"); td.textContent = t; tr.appendChild(td);
                 });
                 tb.appendChild(tr);

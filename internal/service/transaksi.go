@@ -53,8 +53,9 @@ func (s *Service) ProsesTap(rawUID string) model.TapResult {
 
 	var k model.Kelas
 	var kartuAktif, kelasAktif int
-	err := s.db.QueryRow(`SELECT k.id,k.nama,k.nama_ketua,c.aktif,k.aktif FROM kartu c JOIN kelas k ON k.id=c.kelas_id WHERE c.uid=?`, uid).
-		Scan(&k.ID, &k.Nama, &k.NamaKetua, &kartuAktif, &kelasAktif)
+	var nisn, namaSiswa string
+	err := s.db.QueryRow(`SELECT k.id,k.nama,k.nama_ketua,c.aktif,k.aktif,COALESCE(c.nisn,''),COALESCE(c.nama_siswa,'') FROM kartu c JOIN kelas k ON k.id=c.kelas_id WHERE c.uid=?`, uid).
+		Scan(&k.ID, &k.Nama, &k.NamaKetua, &kartuAktif, &kelasAktif, &nisn, &namaSiswa)
 	if err != nil || kartuAktif != 1 || kelasAktif != 1 {
 		return pesan("err", "Kartu tidak terdaftar")
 	}
@@ -70,14 +71,14 @@ func (s *Service) ProsesTap(rawUID string) model.TapResult {
 		return pesan("info", "Baru saja tercatat")
 	}
 
-	base := model.TapResult{KelasID: k.ID, NamaKelas: k.Nama, NamaKetua: k.NamaKetua, Tipe: "ok"}
-
+	base := model.TapResult{KelasID: k.ID, NamaKelas: k.Nama, NamaKetua: k.NamaKetua, Tipe: "ok", NISN: nisn, NamaSiswa: namaSiswa}
 	var status, waktuAmbil string
 	var jAmbil int
 	err = s.db.QueryRow(`SELECT status,COALESCE(waktu_ambil,''),COALESCE(jumlah_ambil,0) FROM transaksi WHERE tanggal=? AND kelas_id=?`, tgl, k.ID).
 		Scan(&status, &waktuAmbil, &jAmbil)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.pending = &pendingInput{k.ID, k.Nama}
+		s.siswaNISN, s.siswaNama = nisn, namaSiswa
 		base.Aksi = "AMBIL"
 		return base
 	}
@@ -91,6 +92,7 @@ func (s *Service) ProsesTap(rawUID string) model.TapResult {
 
 	base.JumlahAmbil = jAmbil
 	s.pending = &pendingInput{k.ID, k.Nama}
+	s.siswaNISN, s.siswaNama = nisn, namaSiswa
 	if t, err := time.ParseInLocation("2006-01-02 15:04", tgl+" "+waktuAmbil, timeutil.WIB); err == nil {
 		menit := int(now.Sub(t).Minutes())
 		if menit < s.jedaMenit() {
@@ -107,9 +109,8 @@ func (s *Service) ProsesTap(rawUID string) model.TapResult {
 func (s *Service) BatalInput() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.pending != nil {
-	}
 	s.pending = nil
+	s.siswaNISN, s.siswaNama = "", ""
 }
 
 func (s *Service) SubmitAmbil(kelasID int64, jumlah int) error {
@@ -128,8 +129,8 @@ func (s *Service) SubmitAmbil(kelasID int64, jumlah int) error {
 	if err := tx.QueryRow(`SELECT nama,nama_ketua FROM kelas WHERE id=?`, kelasID).Scan(&nama, &ketua); err != nil {
 		return errors.New("Kelas tidak ditemukan")
 	}
-	res, err := tx.Exec(`INSERT INTO transaksi (tanggal,kelas_id,nama_kelas,nama_ketua,waktu_ambil,jumlah_ambil,status) VALUES (?,?,?,?,?,?,'AMBIL')`,
-		timeutil.Tanggal(now), kelasID, nama, ketua, timeutil.Jam(now), jumlah)
+	res, err := tx.Exec(`INSERT INTO transaksi (tanggal,kelas_id,nama_kelas,nama_ketua,waktu_ambil,jumlah_ambil,status,nisn_ambil,nama_ambil) VALUES (?,?,?,?,?,?,'AMBIL',?,?)`,
+		timeutil.Tanggal(now), kelasID, nama, ketua, timeutil.Jam(now), jumlah, s.siswaNISN, s.siswaNama)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
 			return errors.New("Kelas ini sudah tercatat mengambil hari ini")
@@ -138,7 +139,7 @@ func (s *Service) SubmitAmbil(kelasID int64, jumlah int) error {
 	}
 	id, _ := res.LastInsertId()
 	if err := s.audit(tx, now, "TAMBAH", "transaksi", itoa(id), nil,
-		map[string]any{"kelas": nama, "jumlah_ambil": jumlah, "status": "AMBIL"}, ""); err != nil {
+		map[string]any{"kelas": nama, "jumlah_ambil": jumlah, "status": "AMBIL", "pengambil": s.siswaNama}, ""); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -146,6 +147,7 @@ func (s *Service) SubmitAmbil(kelasID int64, jumlah int) error {
 	}
 	s.lastSubmit[kelasID] = now
 	s.pending = nil
+	s.siswaNISN, s.siswaNama = "", ""
 	return nil
 }
 
@@ -175,13 +177,13 @@ func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
 	if jumlah > jAmbil {
 		return fmt.Errorf("Jumlah kembali (%d) tidak boleh melebihi jumlah ambil (%d)", jumlah, jAmbil)
 	}
-	if _, err := tx.Exec(`UPDATE transaksi SET waktu_kembali=?,jumlah_kembali=?,status='SELESAI' WHERE id=?`,
-		timeutil.Jam(now), jumlah, id); err != nil {
+	if _, err := tx.Exec(`UPDATE transaksi SET waktu_kembali=?,jumlah_kembali=?,status='SELESAI',nisn_kembali=?,nama_kembali=? WHERE id=?`,
+		timeutil.Jam(now), jumlah, s.siswaNISN, s.siswaNama, id); err != nil {
 		return err
 	}
 	if err := s.audit(tx, now, "UBAH", "transaksi", itoa(id),
 		map[string]any{"status": "AMBIL"},
-		map[string]any{"status": "SELESAI", "jumlah_kembali": jumlah}, ""); err != nil {
+		map[string]any{"status": "SELESAI", "jumlah_kembali": jumlah, "pengembali": s.siswaNama}, ""); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -189,6 +191,7 @@ func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
 	}
 	s.lastSubmit[kelasID] = now
 	s.pending = nil
+	s.siswaNISN, s.siswaNama = "", ""
 	return nil
 }
 

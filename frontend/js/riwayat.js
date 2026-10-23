@@ -38,7 +38,7 @@ const Riwayat = {
             rows.forEach(r => {
                 const tr = document.createElement("tr");
                 if (r.merah) tr.className = "merah";
-                [r.tanggal, r.nama_kelas, r.nama_ketua, r.status, v(r.jumlah_ambil), v(r.jumlah_kembali),
+                [r.tanggal, r.nama_kelas, r.nama_ketua, r.nama_ambil || "-", r.nama_kembali || "-", r.status, v(r.jumlah_ambil), v(r.jumlah_kembali),
                 (r.waktu_ambil || "-") + " / " + (r.waktu_kembali || "-"), r.keterangan].forEach(t => {
                     const td = document.createElement("td"); td.textContent = t; tr.appendChild(td);
                 });
@@ -49,7 +49,7 @@ const Riwayat = {
                 wadah.append(be, bh); td.appendChild(wadah); tr.appendChild(td);
                 tb.appendChild(tr);
             });
-            if (!rows.length) tb.innerHTML = '<tr><td colspan="9">Tidak ada data.</td></tr>';
+            if (!rows.length) tb.innerHTML = '<tr><td colspan="11">Tidak ada data.</td></tr>';
         } catch (e) { toast(String(e.message || e), "err"); }
     },
 

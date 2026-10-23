@@ -9,9 +9,11 @@ type Kelas struct {
 }
 
 type Kartu struct {
-	UID     string `json:"uid"`
-	KelasID int64  `json:"kelas_id"`
-	Aktif   bool   `json:"aktif"`
+	UID       string `json:"uid"`
+	KelasID   int64  `json:"kelas_id"`
+	Aktif     bool   `json:"aktif"`
+	NISN      string `json:"nisn"`
+	NamaSiswa string `json:"nama_siswa"`
 }
 
 type Pengaturan struct {
@@ -37,6 +39,8 @@ type TapResult struct {
 	NamaKetua   string `json:"nama_ketua"`
 	JumlahAmbil int    `json:"jumlah_ambil"`
 	MenitSejak  int    `json:"menit_sejak"`
+	NISN        string `json:"nisn"`
+	NamaSiswa   string `json:"nama_siswa"`
 }
 
 type BarisHari struct {
@@ -82,6 +86,8 @@ type Transaksi struct {
 	Catatan       string `json:"catatan"`
 	Keterangan    string `json:"keterangan"`
 	Merah         bool   `json:"merah"`
+	NamaAmbil     string `json:"nama_ambil"`
+	NamaKembali   string `json:"nama_kembali"`
 }
 
 type EditTransaksi struct {

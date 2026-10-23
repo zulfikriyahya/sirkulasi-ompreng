@@ -83,7 +83,7 @@ const Master = {
         if (!kid) return;
         (await API.ListKartu(kid)).forEach(c => {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${esc(c.uid)}</td><td class="aksi-sel"><div class="aksi-baris"></div></td>`;
+            tr.innerHTML = `<td>${esc(c.uid)}</td><td>${esc(c.nisn || "-")}</td><td>${esc(c.nama_siswa || "-")}</td><td class="aksi-sel"><div class="aksi-baris"></div></td>`;
             const b = document.createElement("button"); b.textContent = "Hapus"; b.className = "bahaya";
             b.onclick = async () => {
                 if (!confirm("Hapus kartu " + c.uid + "?")) return;
@@ -96,8 +96,8 @@ const Master = {
         try {
             const kid = parseInt(val("c-kelas"), 10);
             if (!kid) throw new Error("Pilih kelas dulu");
-            await API.DaftarkanKartu(val("c-uid"), kid);
-            setv("c-uid", ""); toast("Kartu terdaftar", "ok"); this.muatKartu();
+            await API.DaftarkanKartu(val("c-uid"), kid, val("c-nisn").trim(), val("c-nama").trim());
+            setv("c-uid", ""); setv("c-nisn", ""); setv("c-nama", "");
         } catch (e) { toast(String(e.message || e), "err"); }
     },
 };

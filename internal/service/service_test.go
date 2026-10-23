@@ -23,7 +23,7 @@ func TestAlurTap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.DaftarkanKartu("12345678", id); err != nil {
+	if err := s.DaftarkanKartu("12345678", id, "", ""); err != nil {
 		t.Fatal(err)
 	}
 

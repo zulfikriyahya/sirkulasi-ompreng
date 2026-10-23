@@ -76,7 +76,7 @@ func (s *Service) susunLaporan(dari, sampai string) (export.Laporan, error) {
 	l.TanggalCetak = timeutil.TanggalIndo(s.now())
 
 	rows, err := s.db.Query(`SELECT tanggal,nama_kelas,nama_ketua,COALESCE(waktu_ambil,''),COALESCE(waktu_kembali,''),
-		jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,'') FROM transaksi
+		jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,''),COALESCE(nama_ambil,''),COALESCE(nama_kembali,'') FROM transaksi
 		WHERE tanggal>=? AND tanggal<=? AND status!='TIDAK_AMBIL'
 		ORDER BY tanggal,(SELECT urutan FROM kelas k WHERE k.id=transaksi.kelas_id),nama_kelas`, dari, sampai)
 	if err != nil {
@@ -84,9 +84,9 @@ func (s *Service) susunLaporan(dari, sampai string) (export.Laporan, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var tgl, kelas, ketua, wa, wk, status, cat string
+		var tgl, kelas, ketua, wa, wk, status, cat, pengambil, pengembali string
 		var ja, jk sql.NullInt64
-		if err := rows.Scan(&tgl, &kelas, &ketua, &wa, &wk, &ja, &jk, &status, &cat); err != nil {
+		if err := rows.Scan(&tgl, &kelas, &ketua, &wa, &wk, &ja, &jk, &status, &cat, &pengambil, &pengembali); err != nil {
 			return l, err
 		}
 		var pja, pjk *int
@@ -107,6 +107,7 @@ func (s *Service) susunLaporan(dari, sampai string) (export.Laporan, error) {
 			Kelas: kelas, Ketua: ketua, Tanggal: timeutil.TanggalIndo(t),
 			WaktuAmbil: wib(wa), WaktuKembali: wib(wk),
 			JumlahAmbil: angka(ja), JumlahKembali: angka(jk), Keterangan: ket, Merah: merah,
+			Pengambil: strip(pengambil), Pengembali: strip(pengembali),
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -241,4 +242,11 @@ func (s *Service) PratinjauLaporan(dari, sampai string) ([]export.Baris, error) 
 		return []export.Baris{}, err
 	}
 	return l.Baris, nil
+}
+
+func strip(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "-"
+	}
+	return s
 }

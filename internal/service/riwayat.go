@@ -10,7 +10,7 @@ import (
 	"mbg/internal/model"
 )
 
-const kolomTrx = `id,tanggal,kelas_id,nama_kelas,nama_ketua,COALESCE(waktu_ambil,''),COALESCE(waktu_kembali,''),jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,'')`
+const kolomTrx = `id,tanggal,kelas_id,nama_kelas,nama_ketua,COALESCE(waktu_ambil,''),COALESCE(waktu_kembali,''),jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,''),COALESCE(nama_ambil,''),COALESCE(nama_kembali,'')`
 
 type pemindai interface{ Scan(dest ...any) error }
 
@@ -18,7 +18,7 @@ func scanTrx(r pemindai) (model.Transaksi, error) {
 	var t model.Transaksi
 	var ja, jk sql.NullInt64
 	if err := r.Scan(&t.ID, &t.Tanggal, &t.KelasID, &t.NamaKelas, &t.NamaKetua, &t.WaktuAmbil, &t.WaktuKembali,
-		&ja, &jk, &t.Status, &t.Catatan); err != nil {
+		&ja, &jk, &t.Status, &t.Catatan, &t.NamaAmbil, &t.NamaKembali); err != nil {
 		return t, err
 	}
 	if ja.Valid {

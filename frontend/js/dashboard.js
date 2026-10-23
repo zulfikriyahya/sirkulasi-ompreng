@@ -30,6 +30,7 @@ const Dash = {
         this.bukaModal(`
       <h2>${ambil ? "Pengambilan" : "Pengembalian"} - ${esc(r.nama_kelas)}</h2>
       <p>Ketua: ${esc(r.nama_ketua)}${ambil ? "" : ` &middot; Diambil: <b>${r.jumlah_ambil}</b> ompreng`}</p>
+      <p>${ambil ? "Pengambil" : "Pengembali"}: <b>${esc(r.nama_siswa || "(kartu tanpa nama)")}</b>${r.nisn ? " &middot; NISN " + esc(r.nisn) : ""}</p>
       <input id="in-jumlah" type="number" min="${ambil ? 1 : 0}" ${ambil ? "" : `max="${r.jumlah_ambil}"`} placeholder="Jumlah ${ambil ? "diambil" : "dikembalikan"}">
       <div class="galat" id="in-galat"></div>
       <div class="aksi"><button id="in-batal">Batal</button><button id="in-ok">Submit</button></div>`);
@@ -56,7 +57,7 @@ const Dash = {
     popupKonfirmasi(r) {
         this.bukaModal(`
       <h2>Konfirmasi</h2>
-      <p>Kelas <b>${esc(r.nama_kelas)}</b> baru mengambil ${r.menit_sejak} menit lalu. Tetap proses pengembalian?</p>
+      <p>Kelas <b>${esc(r.nama_kelas)}</b> baru mengambil ${r.menit_sejak} menit lalu. Pengembali: <b>${esc(r.nama_siswa || "-")}</b>. Tetap proses pengembalian?</p>
       <div class="aksi"><button id="kf-tidak">Tidak</button><button id="kf-ya">Ya</button></div>`);
         document.getElementById("kf-tidak").onclick = async () => { await API.BatalInput(); this.tutupModal(); };
         document.getElementById("kf-ya").onclick = () => this.popupJumlah(r, "KEMBALI");
@@ -71,6 +72,7 @@ async function prosesTap(uid) {
         if (r.aksi === "ABAIKAN") return;
         if (r.aksi === "PESAN") return toast(r.pesan, r.tipe);
         bunyi("ok");
+        if (r.nama_siswa) toast(r.nama_siswa + " (" + r.nama_kelas + ")", "info");
         if (r.aksi === "AMBIL") Dash.popupJumlah(r, "AMBIL");
         else if (r.aksi === "KEMBALI") Dash.popupJumlah(r, "KEMBALI");
         else if (r.aksi === "KONFIRMASI_KEMBALI") Dash.popupKonfirmasi(r);

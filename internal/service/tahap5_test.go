@@ -46,7 +46,7 @@ func TestTutupDanBukaHari(t *testing.T) {
 	a, _ := s.TambahKelas("VII A", "Ani", 1)
 	b, _ := s.TambahKelas("VII B", "Budi", 2)
 	c, _ := s.TambahKelas("VII C", "Cici", 3)
-	harusOK(t, s.DaftarkanKartu("1111111111", a))
+	harusOK(t, s.DaftarkanKartu("1111111111", a, "", ""))
 	harusOK(t, s.SubmitAmbil(a, 10))
 	harusOK(t, s.SubmitAmbil(b, 8))
 	harusOK(t, s.SubmitKembali(b, 8))

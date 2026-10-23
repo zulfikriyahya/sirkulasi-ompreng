@@ -24,9 +24,9 @@ func PDF(l Laporan, path string) error {
 	})
 	const bawah = 195.0
 	const lh = 4.5
-	lebar := []float64{10, 22, 60, 34, 28, 30, 22, 22, 49} // total 277
-	heads := []string{"No.", "Kelas", "Nama Ketua Murid", "Tanggal", "Waktu Pengambilan", "Waktu Pengembalian",
-		"Jumlah Ambil", "Jumlah Kembali", "Keterangan"}
+	lebar := []float64{8, 16, 38, 38, 38, 22, 20, 22, 16, 16, 43} // total 277
+	heads := []string{"No.", "Kelas", "Nama Ketua Murid", "Nama Pengambil", "Nama Pengembali", "Tanggal",
+		"Waktu Pengambilan", "Waktu Pengembalian", "Jumlah Ambil", "Jumlah Kembali", "Keterangan"}
 
 	pdf.AddPage()
 
@@ -97,7 +97,7 @@ func PDF(l Laporan, path string) error {
 		for _, c := range []struct {
 			t string
 			w float64
-		}{{b.Ketua, lebar[2]}, {b.Keterangan, lebar[8]}} {
+		}{{b.Ketua, lebar[2]}, {b.Pengambil, lebar[3]}, {b.Pengembali, lebar[4]}, {b.Keterangan, lebar[10]}} {
 			n := len(pdf.SplitLines([]byte(tr(c.t)), c.w-2))
 			if v := float64(n)*lh + 3; v > h {
 				h = v
@@ -116,12 +116,12 @@ func PDF(l Laporan, path string) error {
 		} else {
 			pdf.SetTextColor(0, 0, 0)
 		}
-		vals := []string{fmt.Sprint(i + 1), b.Kelas, b.Ketua, b.Tanggal, b.WaktuAmbil, b.WaktuKembali,
+		vals := []string{fmt.Sprint(i + 1), b.Kelas, b.Ketua, b.Pengambil, b.Pengembali, b.Tanggal, b.WaktuAmbil, b.WaktuKembali,
 			b.JumlahAmbil, b.JumlahKembali, b.Keterangan}
 		x, y := 10.0, pdf.GetY()
 		for c, v := range vals {
 			al := "C"
-			if c == 2 || c == 8 {
+			if c == 2 || c == 3 || c == 4 || c == 10 {
 				al = "L"
 			}
 			kotak(x, y, lebar[c], h, v, al, gaya)

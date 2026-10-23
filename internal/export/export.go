@@ -5,6 +5,8 @@ const JudulLaporan = "LAPORAN PENGAMBILAN DAN PENGEMBALIAN OMPRENG MAKANAN BERGI
 type Baris struct {
 	Kelas         string `json:"kelas"`
 	Ketua         string `json:"ketua"`
+	Pengambil     string `json:"pengambil"`
+	Pengembali    string `json:"pengembali"`
 	Tanggal       string `json:"tanggal"`
 	WaktuAmbil    string `json:"waktu_ambil"`
 	WaktuKembali  string `json:"waktu_kembali"`

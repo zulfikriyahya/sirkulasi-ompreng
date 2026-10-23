@@ -27,6 +27,8 @@ type Service struct {
 	lastSubmit map[int64]time.Time // cooldown per kelas
 	rdr        readerState
 	app        appCtx
+	siswaNISN  string
+	siswaNama  string
 }
 
 func New(db *sql.DB, dir string) *Service {
