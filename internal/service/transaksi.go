@@ -16,8 +16,8 @@ import (
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 
 const (
-	debounceTap   = 2 * time.Second
-	cooldownKelas = 30 * time.Second
+	debounceTap   = 1 * time.Second
+	cooldownKelas = 10 * time.Second
 	// cooldownSusulan: setelah pengembalian yang masih kurang (status KURANG), cooldown kelas
 	// dipendekkan supaya teman sekelas yang menyusul membawa sisa ompreng tidak ditolak
 	// "Baru saja tercatat" selama 30 detik. 5 detik tetap menahan tap ganda dari kartu yang menempel.

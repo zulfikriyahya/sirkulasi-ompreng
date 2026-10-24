@@ -9,14 +9,17 @@ constexpr uint8_t PIN_RST = 3;
 constexpr uint8_t PIN_LED = 8;
 
 constexpr bool UID_LITTLE_ENDIAN = true;
-constexpr uint32_t DEBOUNCE_MS = 1500;
+constexpr uint32_t DEBOUNCE_MS = 500;
 constexpr uint32_t HEALTH_CHECK_MS = 5000;
+constexpr uint32_t LED_MS = 60;
 
 MFRC522 rfid(PIN_SS, PIN_RST);
 
 uint32_t lastUid = 0xFFFFFFFF;
 uint32_t lastTapMs = 0;
 uint32_t lastCheckMs = 0;
+uint32_t ledOffAt = 0;
+bool ledOn = false;
 bool rc522Healthy = false;
 
 static bool rc522Present()
@@ -25,11 +28,12 @@ static bool rc522Present()
   return v != 0x00 && v != 0xFF;
 }
 
-static void blink(uint16_t ms)
+// LED aktif rendah; dimatikan oleh loop() tanpa menahan pemindaian
+static void ledPulse(uint32_t now)
 {
   digitalWrite(PIN_LED, LOW);
-  delay(ms);
-  digitalWrite(PIN_LED, HIGH);
+  ledOn = true;
+  ledOffAt = now + LED_MS;
 }
 
 static uint32_t uidToNumber(const MFRC522::Uid &uid)
@@ -84,17 +88,17 @@ void loop()
 {
   uint32_t now = millis();
 
+  if (ledOn && (int32_t)(now - ledOffAt) >= 0)
+  {
+    digitalWrite(PIN_LED, HIGH);
+    ledOn = false;
+  }
+
   if (now - lastCheckMs >= HEALTH_CHECK_MS)
   {
     lastCheckMs = now;
-    if (!rc522Present())
-    {
+    if (!rc522Present() || !rc522Healthy)
       initReader();
-    }
-    else if (!rc522Healthy)
-    {
-      initReader();
-    }
   }
   if (!rc522Healthy)
   {
@@ -115,9 +119,10 @@ void loop()
     char line[16];
     snprintf(line, sizeof(line), "%010lu", (unsigned long)uid);
     Serial.println(line);
+    Serial.flush();
     lastUid = uid;
     lastTapMs = now;
-    blink(80);
+    ledPulse(now);
   }
 
   rfid.PICC_HaltA();
