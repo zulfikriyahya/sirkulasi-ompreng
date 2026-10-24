@@ -53,6 +53,14 @@ func Migrate(conn *sql.DB) error {
 			return err
 		}
 	}
+	// Backfill: satu baris pengembalian per transaksi SELESAI lama yang belum punya rincian.
+	// Idempoten berkat NOT EXISTS, aman dijalankan setiap aplikasi dibuka.
+	if _, err := conn.Exec(`INSERT INTO pengembalian (transaksi_id,waktu,jumlah,nisn,nama_siswa)
+		SELECT t.id,t.waktu_kembali,t.jumlah_kembali,t.nisn_kembali,t.nama_kembali FROM transaksi t
+		WHERE t.status='SELESAI' AND t.jumlah_kembali IS NOT NULL AND t.waktu_kembali IS NOT NULL
+		AND NOT EXISTS (SELECT 1 FROM pengembalian p WHERE p.transaksi_id=t.id)`); err != nil {
+		return err
+	}
 	_, err := conn.Exec(`INSERT OR IGNORE INTO pengaturan (id, jabatan_penanggung_jawab) VALUES (1, 'Penanggung Jawab MBG')`)
 	return err
 }
@@ -120,6 +128,15 @@ CREATE TABLE IF NOT EXISTS transaksi (
   catatan TEXT,
   UNIQUE (tanggal, kelas_id)
 );
+CREATE TABLE IF NOT EXISTS pengembalian (
+  id INTEGER PRIMARY KEY,
+  transaksi_id INTEGER NOT NULL REFERENCES transaksi(id) ON DELETE CASCADE,
+  waktu TEXT NOT NULL,
+  jumlah INTEGER NOT NULL,
+  nisn TEXT,
+  nama_siswa TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_pengembalian_trx ON pengembalian(transaksi_id);
 CREATE TABLE IF NOT EXISTS hari_ditutup (
   tanggal TEXT PRIMARY KEY,
   waktu_tutup TEXT NOT NULL,

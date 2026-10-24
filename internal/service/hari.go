@@ -7,7 +7,7 @@ import (
 	"mbg/internal/timeutil"
 )
 
-// TutupHari: kelas AMBIL -> BELUM_KEMBALI, kelas aktif tanpa transaksi -> TIDAK_AMBIL.
+// TutupHari: kelas AMBIL/KURANG -> BELUM_KEMBALI, kelas aktif tanpa transaksi -> TIDAK_AMBIL.
 func (s *Service) TutupHari(catatan string) error {
 	catatan = strings.TrimSpace(catatan)
 	s.mu.Lock()
@@ -27,7 +27,7 @@ func (s *Service) TutupHari(catatan string) error {
 	if n > 0 {
 		return errors.New("Hari ini sudah ditutup")
 	}
-	r1, err := tx.Exec(`UPDATE transaksi SET status='BELUM_KEMBALI' WHERE tanggal=? AND status='AMBIL'`, tgl)
+	r1, err := tx.Exec(`UPDATE transaksi SET status='BELUM_KEMBALI' WHERE tanggal=? AND status IN ('AMBIL','KURANG')`, tgl)
 	if err != nil {
 		return err
 	}
@@ -54,8 +54,9 @@ func (s *Service) TutupHari(catatan string) error {
 	return nil
 }
 
-// BukaHari: hanya hari ini. Status otomatis dikembalikan (BELUM_KEMBALI -> AMBIL, baris TIDAK_AMBIL otomatis dihapus)
-// supaya tap bisa dilanjutkan. Koreksi hari lampau dilakukan lewat Riwayat (edit/hapus).
+// BukaHari: hanya hari ini. Status otomatis dikembalikan supaya tap bisa dilanjutkan:
+// BELUM_KEMBALI tanpa pengembalian -> AMBIL, BELUM_KEMBALI dengan pengembalian sebagian -> KURANG,
+// baris TIDAK_AMBIL otomatis dihapus. Koreksi hari lampau dilakukan lewat Riwayat (edit/hapus).
 func (s *Service) BukaHari(tanggal, alasan string) error {
 	if strings.TrimSpace(alasan) == "" {
 		return errors.New("Alasan wajib diisi")
@@ -82,6 +83,10 @@ func (s *Service) BukaHari(tanggal, alasan string) error {
 	if err != nil {
 		return err
 	}
+	r3, err := tx.Exec(`UPDATE transaksi SET status='KURANG' WHERE tanggal=? AND status='BELUM_KEMBALI' AND jumlah_kembali IS NOT NULL AND jumlah_kembali < jumlah_ambil`, tanggal)
+	if err != nil {
+		return err
+	}
 	r2, err := tx.Exec(`DELETE FROM transaksi WHERE tanggal=? AND status='TIDAK_AMBIL' AND jumlah_ambil IS NULL`, tanggal)
 	if err != nil {
 		return err
@@ -90,18 +95,17 @@ func (s *Service) BukaHari(tanggal, alasan string) error {
 		return err
 	}
 	a, _ := r1.RowsAffected()
+	k, _ := r3.RowsAffected()
 	b, _ := r2.RowsAffected()
 	if err := s.audit(tx, now, "BUKA_HARI", "hari", tanggal, nil,
-		map[string]any{"dikembalikan_ke_ambil": a, "baris_tidak_ambil_dihapus": b}, alasan); err != nil {
+		map[string]any{"dikembalikan_ke_ambil": a, "dikembalikan_ke_kurang": k, "baris_tidak_ambil_dihapus": b}, alasan); err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return nil
+	return tx.Commit()
 }
 
 // ApakahBolehCetak: hari ditutup, atau semua kelas aktif berstatus SELESAI pada tanggal itu.
+// Status KURANG belum dihitung selesai.
 func (s *Service) ApakahBolehCetak(tanggal string) (bool, error) {
 	var n int
 	if err := s.db.QueryRow(`SELECT COUNT(*) FROM hari_ditutup WHERE tanggal=?`, tanggal).Scan(&n); err != nil {

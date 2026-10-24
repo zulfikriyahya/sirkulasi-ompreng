@@ -10,15 +10,20 @@ import (
 	"mbg/internal/model"
 )
 
-const kolomTrx = `id,tanggal,kelas_id,nama_kelas,nama_ketua,COALESCE(waktu_ambil,''),COALESCE(waktu_kembali,''),jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,''),COALESCE(nama_ambil,''),COALESCE(nama_kembali,'')`
+const kolomTrx = `id,tanggal,kelas_id,nama_kelas,nama_ketua,COALESCE(waktu_ambil,''),COALESCE(waktu_kembali,''),jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,''),COALESCE(nama_ambil,''),COALESCE(nama_kembali,''),(SELECT COUNT(*) FROM pengembalian p WHERE p.transaksi_id=transaksi.id)`
 
 type pemindai interface{ Scan(dest ...any) error }
+
+type penanya interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+}
 
 func scanTrx(r pemindai) (model.Transaksi, error) {
 	var t model.Transaksi
 	var ja, jk sql.NullInt64
+	var np int
 	if err := r.Scan(&t.ID, &t.Tanggal, &t.KelasID, &t.NamaKelas, &t.NamaKetua, &t.WaktuAmbil, &t.WaktuKembali,
-		&ja, &jk, &t.Status, &t.Catatan, &t.NamaAmbil, &t.NamaKembali); err != nil {
+		&ja, &jk, &t.Status, &t.Catatan, &t.NamaAmbil, &t.NamaKembali, &np); err != nil {
 		return t, err
 	}
 	if ja.Valid {
@@ -29,8 +34,37 @@ func scanTrx(r pemindai) (model.Transaksi, error) {
 		v := int(jk.Int64)
 		t.JumlahKembali = &v
 	}
-	t.Keterangan, t.Merah = Keterangan(t.Status, t.JumlahAmbil, t.JumlahKembali, t.Catatan)
+	t.Susulan = np > 1
+	t.Keterangan, t.Merah = Keterangan(t.Status, t.JumlahAmbil, t.JumlahKembali, t.Catatan, t.Susulan)
 	return t, nil
+}
+
+// muatRincian: rincian pengembalian untuk sekumpulan transaksi, satu query.
+func muatRincian(q penanya, ids []int64) (map[int64][]model.Pengembalian, error) {
+	out := map[int64][]model.Pengembalian{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	ph := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := q.Query(`SELECT transaksi_id,waktu,jumlah,COALESCE(nisn,''),COALESCE(nama_siswa,'') FROM pengembalian
+		WHERE transaksi_id IN (`+ph+`) ORDER BY transaksi_id,id`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var tid int64
+		var p model.Pengembalian
+		if err := rows.Scan(&tid, &p.Waktu, &p.Jumlah, &p.NISN, &p.NamaSiswa); err != nil {
+			return nil, err
+		}
+		out[tid] = append(out[tid], p)
+	}
+	return out, rows.Err()
 }
 
 func nilInt(p *int) any {
@@ -51,7 +85,7 @@ func jamValid(s string) bool { _, err := time.Parse("15:04", s); return err == n
 
 func validasiEdit(e model.EditTransaksi) error {
 	switch e.Status {
-	case "AMBIL", "SELESAI", "BELUM_KEMBALI", "TIDAK_AMBIL":
+	case "AMBIL", "KURANG", "SELESAI", "BELUM_KEMBALI", "TIDAK_AMBIL":
 	default:
 		return errors.New("Status tidak valid")
 	}
@@ -64,15 +98,22 @@ func validasiEdit(e model.EditTransaksi) error {
 	if !jamValid(e.WaktuAmbil) {
 		return errors.New("Waktu ambil harus berformat HH:MM")
 	}
-	if e.Status == "SELESAI" {
+	if e.Status == "SELESAI" || e.Status == "KURANG" {
+		label := "Selesai"
+		if e.Status == "KURANG" {
+			label = "Kurang"
+		}
 		if e.JumlahKembali == nil {
-			return errors.New("Status Selesai wajib punya jumlah kembali")
+			return fmt.Errorf("Status %s wajib punya jumlah kembali", label)
 		}
 		if *e.JumlahKembali < 0 {
 			return errors.New("Jumlah kembali tidak boleh negatif")
 		}
 		if *e.JumlahKembali > *e.JumlahAmbil {
 			return fmt.Errorf("Jumlah kembali (%d) tidak boleh melebihi jumlah ambil (%d)", *e.JumlahKembali, *e.JumlahAmbil)
+		}
+		if e.Status == "KURANG" && *e.JumlahKembali >= *e.JumlahAmbil {
+			return errors.New("Status Kurang mensyaratkan jumlah kembali lebih kecil dari jumlah ambil")
 		}
 		if !jamValid(e.WaktuKembali) {
 			return errors.New("Waktu kembali harus berformat HH:MM")
@@ -107,14 +148,27 @@ func (s *Service) ListTransaksi(f model.FilterTransaksi) ([]model.Transaksi, err
 	}
 	defer rows.Close()
 	out := []model.Transaksi{}
+	var ids []int64
 	for rows.Next() {
 		t, err := scanTrx(rows)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, t)
+		ids = append(ids, t.ID)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close() // koneksi tunggal: lepas sebelum query berikutnya
+	rm, err := muatRincian(s.db, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Pengembalian = rm[out[i].ID]
+	}
+	return out, nil
 }
 
 func (s *Service) UbahTransaksi(e model.EditTransaksi) error {
@@ -135,6 +189,12 @@ func (s *Service) UbahTransaksi(e model.EditTransaksi) error {
 	if err != nil {
 		return errors.New("Transaksi tidak ditemukan")
 	}
+	rm, err := muatRincian(tx, []int64{e.ID})
+	if err != nil {
+		return err
+	}
+	lama.Pengembalian = rm[e.ID]
+
 	ja, jk, wa, wk := e.JumlahAmbil, e.JumlahKembali, e.WaktuAmbil, e.WaktuKembali
 	switch e.Status {
 	case "AMBIL", "BELUM_KEMBALI":
@@ -147,15 +207,34 @@ func (s *Service) UbahTransaksi(e model.EditTransaksi) error {
 		e.Status, nilInt(ja), nilInt(jk), nilStr(wa), nilStr(wk), nilStr(catatan), e.ID); err != nil {
 		return err
 	}
+
+	// Sinkronkan rincian pengembalian dengan total hasil edit.
+	if (e.Status == "SELESAI" || e.Status == "KURANG") && jk != nil {
+		var n, sum int
+		if err := tx.QueryRow(`SELECT COUNT(*),COALESCE(SUM(jumlah),0) FROM pengembalian WHERE transaksi_id=?`, e.ID).Scan(&n, &sum); err != nil {
+			return err
+		}
+		if n == 0 || sum != *jk {
+			if _, err := tx.Exec(`DELETE FROM pengembalian WHERE transaksi_id=?`, e.ID); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(`INSERT INTO pengembalian (transaksi_id,waktu,jumlah,nisn,nama_siswa) VALUES (?,?,?,NULL,?)`,
+				e.ID, wk, *jk, lama.NamaKembali); err != nil {
+				return err
+			}
+		}
+	} else {
+		if _, err := tx.Exec(`DELETE FROM pengembalian WHERE transaksi_id=?`, e.ID); err != nil {
+			return err
+		}
+	}
+
 	baru := map[string]any{"status": e.Status, "jumlah_ambil": nilInt(ja), "jumlah_kembali": nilInt(jk),
 		"waktu_ambil": wa, "waktu_kembali": wk, "catatan": catatan}
 	if err := s.audit(tx, s.now(), "UBAH", "transaksi", itoa(e.ID), lama, baru, strings.TrimSpace(e.Alasan)); err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return nil
+	return tx.Commit()
 }
 
 func (s *Service) HapusTransaksi(id int64, alasan string) error {
@@ -174,6 +253,12 @@ func (s *Service) HapusTransaksi(id int64, alasan string) error {
 	if err != nil {
 		return errors.New("Transaksi tidak ditemukan")
 	}
+	rm, err := muatRincian(tx, []int64{id})
+	if err != nil {
+		return err
+	}
+	lama.Pengembalian = rm[id]
+	// rincian pengembalian ikut terhapus lewat ON DELETE CASCADE
 	if _, err := tx.Exec(`DELETE FROM transaksi WHERE id=?`, id); err != nil {
 		return err
 	}

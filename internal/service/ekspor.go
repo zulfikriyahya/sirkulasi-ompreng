@@ -76,7 +76,7 @@ func (s *Service) susunLaporan(dari, sampai string) (export.Laporan, error) {
 	l.TanggalCetak = timeutil.TanggalIndo(s.now())
 
 	rows, err := s.db.Query(`SELECT tanggal,nama_kelas,nama_ketua,COALESCE(waktu_ambil,''),COALESCE(waktu_kembali,''),
-		jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,''),COALESCE(nama_ambil,''),COALESCE(nama_kembali,'') FROM transaksi
+		jumlah_ambil,jumlah_kembali,status,COALESCE(catatan,''),COALESCE(nama_ambil,''),COALESCE(nama_kembali,''),(SELECT COUNT(*) FROM pengembalian p WHERE p.transaksi_id=transaksi.id) FROM transaksi
 		WHERE tanggal>=? AND tanggal<=? AND status!='TIDAK_AMBIL'
 		ORDER BY tanggal,(SELECT urutan FROM kelas k WHERE k.id=transaksi.kelas_id),nama_kelas`, dari, sampai)
 	if err != nil {
@@ -86,7 +86,8 @@ func (s *Service) susunLaporan(dari, sampai string) (export.Laporan, error) {
 	for rows.Next() {
 		var tgl, kelas, ketua, wa, wk, status, cat, pengambil, pengembali string
 		var ja, jk sql.NullInt64
-		if err := rows.Scan(&tgl, &kelas, &ketua, &wa, &wk, &ja, &jk, &status, &cat, &pengambil, &pengembali); err != nil {
+		var np int
+		if err := rows.Scan(&tgl, &kelas, &ketua, &wa, &wk, &ja, &jk, &status, &cat, &pengambil, &pengembali, &np); err != nil {
 			return l, err
 		}
 		var pja, pjk *int
@@ -101,7 +102,7 @@ func (s *Service) susunLaporan(dari, sampai string) (export.Laporan, error) {
 		if status == "AMBIL" {
 			status = "BELUM_KEMBALI"
 		}
-		ket, merah := Keterangan(status, pja, pjk, cat)
+		ket, merah := Keterangan(status, pja, pjk, cat, np > 1)
 		t, _ := time.ParseInLocation("2006-01-02", tgl, timeutil.WIB)
 		l.Baris = append(l.Baris, export.Baris{
 			Kelas: kelas, Ketua: ketua, Tanggal: timeutil.TanggalIndo(t),

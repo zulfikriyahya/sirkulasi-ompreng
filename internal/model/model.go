@@ -28,8 +28,9 @@ type Pengaturan struct {
 }
 
 // TapResult: apa yang harus dilakukan UI setelah tap.
-// Aksi: AMBIL | KEMBALI | KONFIRMASI_KEMBALI | PESAN | ABAIKAN
+// Aksi: AMBIL | KEMBALI | KEMBALI_SUSULAN | KONFIRMASI_KEMBALI | PESAN | ABAIKAN
 // Tipe (untuk warna/bunyi): ok | err | info
+// Sisa hanya terisi pada KEMBALI_SUSULAN (jumlah_ambil - total sudah kembali).
 type TapResult struct {
 	Aksi        string `json:"aksi"`
 	Tipe        string `json:"tipe"`
@@ -38,6 +39,7 @@ type TapResult struct {
 	NamaKelas   string `json:"nama_kelas"`
 	NamaKetua   string `json:"nama_ketua"`
 	JumlahAmbil int    `json:"jumlah_ambil"`
+	Sisa        int    `json:"sisa"`
 	MenitSejak  int    `json:"menit_sejak"`
 	NISN        string `json:"nisn"`
 	NamaSiswa   string `json:"nama_siswa"`
@@ -47,7 +49,7 @@ type BarisHari struct {
 	KelasID       int64  `json:"kelas_id"`
 	Nama          string `json:"nama"`
 	NamaKetua     string `json:"nama_ketua"`
-	Status        string `json:"status"` // BELUM_AMBIL | AMBIL | SELESAI | BELUM_KEMBALI | TIDAK_AMBIL
+	Status        string `json:"status"` // BELUM_AMBIL | AMBIL | KURANG | SELESAI | BELUM_KEMBALI | TIDAK_AMBIL
 	JumlahAmbil   *int   `json:"jumlah_ambil"`
 	JumlahKembali *int   `json:"jumlah_kembali"`
 	WaktuAmbil    string `json:"waktu_ambil"`
@@ -72,22 +74,32 @@ type FilterTransaksi struct {
 	Status  string `json:"status"`   // "" = semua
 }
 
+// Pengembalian: satu kali pengembalian (awal atau susulan) pada sebuah transaksi.
+type Pengembalian struct {
+	Waktu     string `json:"waktu"`
+	Jumlah    int    `json:"jumlah"`
+	NISN      string `json:"nisn"`
+	NamaSiswa string `json:"nama_siswa"`
+}
+
 type Transaksi struct {
-	ID            int64  `json:"id"`
-	Tanggal       string `json:"tanggal"`
-	KelasID       int64  `json:"kelas_id"`
-	NamaKelas     string `json:"nama_kelas"`
-	NamaKetua     string `json:"nama_ketua"`
-	WaktuAmbil    string `json:"waktu_ambil"`
-	WaktuKembali  string `json:"waktu_kembali"`
-	JumlahAmbil   *int   `json:"jumlah_ambil"`
-	JumlahKembali *int   `json:"jumlah_kembali"`
-	Status        string `json:"status"`
-	Catatan       string `json:"catatan"`
-	Keterangan    string `json:"keterangan"`
-	Merah         bool   `json:"merah"`
-	NamaAmbil     string `json:"nama_ambil"`
-	NamaKembali   string `json:"nama_kembali"`
+	ID            int64          `json:"id"`
+	Tanggal       string         `json:"tanggal"`
+	KelasID       int64          `json:"kelas_id"`
+	NamaKelas     string         `json:"nama_kelas"`
+	NamaKetua     string         `json:"nama_ketua"`
+	WaktuAmbil    string         `json:"waktu_ambil"`
+	WaktuKembali  string         `json:"waktu_kembali"`
+	JumlahAmbil   *int           `json:"jumlah_ambil"`
+	JumlahKembali *int           `json:"jumlah_kembali"`
+	Status        string         `json:"status"`
+	Catatan       string         `json:"catatan"`
+	Keterangan    string         `json:"keterangan"`
+	Merah         bool           `json:"merah"`
+	NamaAmbil     string         `json:"nama_ambil"`
+	NamaKembali   string         `json:"nama_kembali"`
+	Susulan       bool           `json:"susulan"`
+	Pengembalian  []Pengembalian `json:"pengembalian"`
 }
 
 type EditTransaksi struct {

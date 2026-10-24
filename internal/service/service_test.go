@@ -58,13 +58,27 @@ func TestAlurTap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	now = now.Add(time.Minute)
-	if r := s.ProsesTap("0012345678"); r.Aksi != "PESAN" {
-		t.Fatalf("sudah selesai: %+v", r)
+	// 30 < 31: status KURANG, transaksi masih terbuka untuk susulan
+	st, _ := s.StatusHariIni()
+	if st.SemuaSelesai || st.Baris[0].Status != "KURANG" || st.Baris[0].Keterangan != "Kurang 1 Ompreng" || !st.Baris[0].Merah {
+		t.Fatalf("status kurang: %+v", st)
 	}
 
-	st, _ := s.StatusHariIni()
-	if !st.SemuaSelesai || st.Baris[0].Keterangan != "Kurang 1 Ompreng" || !st.Baris[0].Merah {
-		t.Fatalf("status: %+v", st)
+	now = now.Add(time.Minute)
+	if r := s.ProsesTap("0012345678"); r.Aksi != "KEMBALI_SUSULAN" || r.Sisa != 1 {
+		t.Fatalf("susulan: %+v", r)
+	}
+	if err := s.SubmitKembali(id, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	now = now.Add(time.Minute)
+	if r := s.ProsesTap("0012345678"); r.Aksi != "PESAN" {
+		t.Fatalf("sudah lengkap: %+v", r)
+	}
+
+	st, _ = s.StatusHariIni()
+	if !st.SemuaSelesai || st.Baris[0].Keterangan != "Lengkap (susulan)" || st.Baris[0].Merah {
+		t.Fatalf("status akhir: %+v", st)
 	}
 }

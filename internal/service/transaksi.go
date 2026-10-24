@@ -18,6 +18,10 @@ func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 const (
 	debounceTap   = 2 * time.Second
 	cooldownKelas = 30 * time.Second
+	// cooldownSusulan: setelah pengembalian yang masih kurang (status KURANG), cooldown kelas
+	// dipendekkan supaya teman sekelas yang menyusul membawa sisa ompreng tidak ditolak
+	// "Baru saja tercatat" selama 30 detik. 5 detik tetap menahan tap ganda dari kartu yang menempel.
+	cooldownSusulan = 5 * time.Second
 )
 
 func (s *Service) jedaMenit() int {
@@ -67,32 +71,52 @@ func (s *Service) ProsesTap(rawUID string) model.TapResult {
 		return pesan("err", "Hari ini sudah ditutup")
 	}
 
+	base := model.TapResult{KelasID: k.ID, NamaKelas: k.Nama, NamaKetua: k.NamaKetua, Tipe: "ok", NISN: nisn, NamaSiswa: namaSiswa}
+	var status, waktuAmbil string
+	var jAmbil, jKembali int
+	adaTrx := true
+	err = s.db.QueryRow(`SELECT status,COALESCE(waktu_ambil,''),COALESCE(jumlah_ambil,0),COALESCE(jumlah_kembali,0) FROM transaksi WHERE tanggal=? AND kelas_id=?`, tgl, k.ID).
+		Scan(&status, &waktuAmbil, &jAmbil, &jKembali)
+	if errors.Is(err, sql.ErrNoRows) {
+		adaTrx = false
+	} else if err != nil {
+		return pesan("err", "Kesalahan database")
+	}
+
+	// Penolakan final ditempatkan sebelum cooldown agar pesannya selalu jelas,
+	// untuk kartu siswa mana pun di kelas yang sama.
+	if adaTrx && status == "SELESAI" {
+		if jKembali >= jAmbil {
+			return pesan("info", "Kelas "+k.Nama+" sudah mengembalikan ompreng dengan lengkap")
+		}
+		return pesan("info", "Kelas "+k.Nama+" sudah selesai hari ini") // data lama (SELESAI kurang) dianggap final
+	}
+	if adaTrx && status != "AMBIL" && status != "KURANG" {
+		return pesan("info", "Kelas "+k.Nama+" sudah selesai hari ini")
+	}
+
 	if t, ok := s.lastSubmit[k.ID]; ok && now.Sub(t) < cooldownKelas {
 		return pesan("info", "Baru saja tercatat")
 	}
 
-	base := model.TapResult{KelasID: k.ID, NamaKelas: k.Nama, NamaKetua: k.NamaKetua, Tipe: "ok", NISN: nisn, NamaSiswa: namaSiswa}
-	var status, waktuAmbil string
-	var jAmbil int
-	err = s.db.QueryRow(`SELECT status,COALESCE(waktu_ambil,''),COALESCE(jumlah_ambil,0) FROM transaksi WHERE tanggal=? AND kelas_id=?`, tgl, k.ID).
-		Scan(&status, &waktuAmbil, &jAmbil)
-	if errors.Is(err, sql.ErrNoRows) {
+	if !adaTrx {
 		s.pending = &pendingInput{k.ID, k.Nama}
 		s.siswaNISN, s.siswaNama = nisn, namaSiswa
 		base.Aksi = "AMBIL"
 		return base
 	}
-	if err != nil {
-		return pesan("err", "Kesalahan database")
-	}
-
-	if status != "AMBIL" {
-		return pesan("info", "Kelas "+k.Nama+" sudah selesai hari ini")
-	}
 
 	base.JumlahAmbil = jAmbil
 	s.pending = &pendingInput{k.ID, k.Nama}
 	s.siswaNISN, s.siswaNama = nisn, namaSiswa
+
+	if status == "KURANG" {
+		// Susulan: tanpa peringatan jeda minimum.
+		base.Aksi = "KEMBALI_SUSULAN"
+		base.Sisa = jAmbil - jKembali
+		return base
+	}
+
 	if t, err := time.ParseInLocation("2006-01-02 15:04", tgl+" "+waktuAmbil, timeutil.WIB); err == nil {
 		menit := int(now.Sub(t).Minutes())
 		if menit < s.jedaMenit() {
@@ -151,6 +175,32 @@ func (s *Service) SubmitAmbil(kelasID int64, jumlah int) error {
 	return nil
 }
 
+// namaPengembali: nama unik semua pengembali (urut waktu), dipisah koma.
+func namaPengembali(tx *sql.Tx, id int64) (string, error) {
+	rows, err := tx.Query(`SELECT COALESCE(nama_siswa,'') FROM pengembalian WHERE transaksi_id=? ORDER BY id`, id)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var out []string
+	ada := map[string]bool{}
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			return "", err
+		}
+		n = strings.TrimSpace(n)
+		if n == "" || ada[n] {
+			continue
+		}
+		ada[n] = true
+		out = append(out, n)
+	}
+	return strings.Join(out, ", "), rows.Err()
+}
+
+// SubmitKembali: pengembalian awal (status AMBIL, 0..jumlah_ambil) atau susulan (status KURANG, 1..sisa).
+// Setiap pemanggilan menambah satu baris pengembalian; transaksi menyimpan total akumulasi.
 func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
 	if jumlah < 0 {
 		return errors.New("Jumlah kembali tidak boleh negatif")
@@ -165,31 +215,71 @@ func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
 	defer tx.Rollback()
 	var id int64
 	var status, nama string
-	var jAmbil int
-	err = tx.QueryRow(`SELECT id,status,nama_kelas,COALESCE(jumlah_ambil,0) FROM transaksi WHERE tanggal=? AND kelas_id=?`,
-		timeutil.Tanggal(now), kelasID).Scan(&id, &status, &nama, &jAmbil)
+	var jAmbil, jKembali int
+	err = tx.QueryRow(`SELECT id,status,nama_kelas,COALESCE(jumlah_ambil,0),COALESCE(jumlah_kembali,0) FROM transaksi WHERE tanggal=? AND kelas_id=?`,
+		timeutil.Tanggal(now), kelasID).Scan(&id, &status, &nama, &jAmbil, &jKembali)
 	if err != nil {
 		return errors.New("Belum ada pengambilan hari ini untuk kelas ini")
 	}
-	if status != "AMBIL" {
+	susulan := false
+	switch status {
+	case "AMBIL":
+		jKembali = 0
+		if jumlah > jAmbil {
+			return fmt.Errorf("Jumlah kembali (%d) tidak boleh melebihi jumlah ambil (%d)", jumlah, jAmbil)
+		}
+	case "KURANG":
+		susulan = true
+		sisa := jAmbil - jKembali
+		if jumlah < 1 {
+			return fmt.Errorf("Jumlah susulan harus minimal 1 (sisa %d)", sisa)
+		}
+		if jumlah > sisa {
+			return fmt.Errorf("Jumlah susulan (%d) tidak boleh melebihi sisa (%d)", jumlah, sisa)
+		}
+	default:
 		return errors.New("Transaksi kelas ini sudah selesai")
 	}
-	if jumlah > jAmbil {
-		return fmt.Errorf("Jumlah kembali (%d) tidak boleh melebihi jumlah ambil (%d)", jumlah, jAmbil)
+
+	total := jKembali + jumlah
+	statusBaru := "KURANG"
+	if total >= jAmbil {
+		statusBaru = "SELESAI"
 	}
-	if _, err := tx.Exec(`UPDATE transaksi SET waktu_kembali=?,jumlah_kembali=?,status='SELESAI',nisn_kembali=?,nama_kembali=? WHERE id=?`,
-		timeutil.Jam(now), jumlah, s.siswaNISN, s.siswaNama, id); err != nil {
+	jam := timeutil.Jam(now)
+	if _, err := tx.Exec(`INSERT INTO pengembalian (transaksi_id,waktu,jumlah,nisn,nama_siswa) VALUES (?,?,?,?,?)`,
+		id, jam, jumlah, s.siswaNISN, s.siswaNama); err != nil {
 		return err
 	}
-	if err := s.audit(tx, now, "UBAH", "transaksi", itoa(id),
-		map[string]any{"status": "AMBIL"},
-		map[string]any{"status": "SELESAI", "jumlah_kembali": jumlah, "pengembali": s.siswaNama}, ""); err != nil {
+	namaGabung, err := namaPengembali(tx, id)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE transaksi SET waktu_kembali=?,jumlah_kembali=?,status=?,nisn_kembali=?,nama_kembali=? WHERE id=?`,
+		jam, total, statusBaru, s.siswaNISN, namaGabung, id); err != nil {
+		return err
+	}
+
+	lama := map[string]any{"status": status}
+	baru := map[string]any{"status": statusBaru, "jumlah_kembali": total, "pengembali": s.siswaNama}
+	alasan := ""
+	if susulan {
+		lama["jumlah_kembali"] = jKembali
+		baru["jumlah_susulan"] = jumlah
+		alasan = "pengembalian susulan"
+	}
+	if err := s.audit(tx, now, "UBAH", "transaksi", itoa(id), lama, baru, alasan); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	s.lastSubmit[kelasID] = now
+	if statusBaru == "KURANG" {
+		// dimundurkan agar efektif hanya cooldownSusulan (lihat komentar konstanta)
+		s.lastSubmit[kelasID] = now.Add(-(cooldownKelas - cooldownSusulan))
+	} else {
+		s.lastSubmit[kelasID] = now
+	}
 	s.pending = nil
 	s.siswaNISN, s.siswaNama = "", ""
 	return nil
@@ -206,7 +296,8 @@ func (s *Service) StatusHariIni() (model.StatusHari, error) {
 	out.Ditutup = n > 0
 
 	rows, err := s.db.Query(`SELECT k.id,k.nama,k.nama_ketua,t.status,t.jumlah_ambil,t.jumlah_kembali,
-		COALESCE(t.waktu_ambil,''),COALESCE(t.waktu_kembali,'')
+		COALESCE(t.waktu_ambil,''),COALESCE(t.waktu_kembali,''),
+		(SELECT COUNT(*) FROM pengembalian p WHERE p.transaksi_id=t.id)
 		FROM kelas k LEFT JOIN transaksi t ON t.kelas_id=k.id AND t.tanggal=?
 		WHERE k.aktif=1 ORDER BY k.urutan,k.nama`, tgl)
 	if err != nil {
@@ -218,7 +309,8 @@ func (s *Service) StatusHariIni() (model.StatusHari, error) {
 		var b model.BarisHari
 		var st sql.NullString
 		var ja, jk sql.NullInt64
-		if err := rows.Scan(&b.KelasID, &b.Nama, &b.NamaKetua, &st, &ja, &jk, &b.WaktuAmbil, &b.WaktuKembali); err != nil {
+		var np int
+		if err := rows.Scan(&b.KelasID, &b.Nama, &b.NamaKetua, &st, &ja, &jk, &b.WaktuAmbil, &b.WaktuKembali, &np); err != nil {
 			return out, err
 		}
 		b.Status = "BELUM_AMBIL"
@@ -233,7 +325,7 @@ func (s *Service) StatusHariIni() (model.StatusHari, error) {
 			v := int(jk.Int64)
 			b.JumlahKembali = &v
 		}
-		b.Keterangan, b.Merah = Keterangan(b.Status, b.JumlahAmbil, b.JumlahKembali, "")
+		b.Keterangan, b.Merah = Keterangan(b.Status, b.JumlahAmbil, b.JumlahKembali, "", np > 1)
 		if b.Status != "SELESAI" {
 			semua = false
 		}
@@ -244,19 +336,35 @@ func (s *Service) StatusHariIni() (model.StatusHari, error) {
 	return out, rows.Err()
 }
 
-// Keterangan: aturan 4.3. Dipakai dashboard dan nanti ekspor.
-func Keterangan(status string, ambil, kembali *int, catatan string) (string, bool) {
+// Keterangan: aturan 4.3. Dipakai dashboard, riwayat, dan ekspor.
+// susulan = true bila transaksi punya lebih dari satu pengembalian.
+func Keterangan(status string, ambil, kembali *int, catatan string, susulan bool) (string, bool) {
 	var ket string
 	merah := false
+	kurang := ""
+	if ambil != nil && kembali != nil && *kembali < *ambil {
+		kurang = fmt.Sprintf("Kurang %d Ompreng", *ambil-*kembali)
+	}
 	switch status {
 	case "SELESAI":
-		if ambil != nil && kembali != nil && *kembali < *ambil {
-			ket, merah = fmt.Sprintf("Kurang %d Ompreng", *ambil-*kembali), true
-		} else {
+		switch {
+		case kurang != "":
+			ket, merah = kurang, true
+		case susulan:
+			ket = "Lengkap (susulan)"
+		default:
 			ket = "Lengkap"
+		}
+	case "KURANG":
+		ket, merah = kurang, true
+		if ket == "" {
+			ket = "Kurang"
 		}
 	case "BELUM_KEMBALI":
 		ket, merah = "Belum kembali", true
+		if kurang != "" {
+			ket = kurang // sudah ada pengembalian sebagian sebelum hari ditutup
+		}
 	case "TIDAK_AMBIL":
 		ket, merah = "Tidak mengambil", true
 	}
