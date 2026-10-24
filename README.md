@@ -17,6 +17,7 @@ Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debia
 - Validasi: jumlah kembali tidak boleh melebihi jumlah ambil
 - Tutup hari dengan catatan, dan buka kembali bila perlu
 - Edit dan hapus transaksi dengan alasan wajib, tercatat di audit log
+- Validasi: jumlah ambil dan jumlah kembali minimal 1, dan jumlah kembali tidak boleh melebihi jumlah ambil
 
 **Notifikasi WhatsApp ke wali kelas**
 - Pesan otomatis ke wali kelas saat kelasnya mengambil dan mengembalikan ompreng
@@ -70,6 +71,7 @@ Aplikasi mengirim pesan lewat layanan WhatsApp milik instansi (`POST /api/v1/mes
 1. Setelah **Submit ambil** atau **Submit kembali** berhasil tersimpan, pesan dimasukkan ke tabel antrean (`wa_antrean`).
 2. Worker di latar belakang mengirim antrean setiap 20 detik, atau segera setelah ada pesan baru.
 3. Pencatatan ompreng tidak pernah gagal karena WhatsApp: galat antrean hanya dicatat ke log.
+4. Riwayat notifikasi berstatus TERKIRIM atau GAGAL dihapus otomatis setelah 7 hari.
 
 Aturan pengiriman:
 
@@ -258,7 +260,7 @@ Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh
 
    ```bash
    export VERSION=0.3.1
-   sed -i "s/0\.2\.1/${VERSION}/g" README.md   # ganti 0.2.1 dengan versi sebelumnya
+   sed -i "s/0\.3\.1/${VERSION}/g" README.md   # ganti 0.3.1 dengan versi sebelumnya
    ```
 
 2. Jalankan perintah di bagian **Build** (semua target) dengan `VERSION` yang sama.
