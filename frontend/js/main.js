@@ -105,13 +105,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ---- Reader serial: event dari backend ----
 let _readerOk = null;
+const _mulaiApp = performance.now();
 function tampilStatusReader(st) {
   const el = document.getElementById("status-reader");
   if (!el) return;
   const ok = !!(st && st.terhubung);
-  bunyi(ok ? "ok" : "err", true);
   if (_readerOk !== null && _readerOk !== ok) {
-    bunyi(ok ? "ok" : "err");
+    // bunyi hanya untuk cabut/colok saat aplikasi sudah berjalan; 4 detik pertama
+    // dianggap masa deteksi awal sehingga tetap senyap
+    if (performance.now() - _mulaiApp > 4000) bunyi(ok ? "ok" : "err", true);
     toast(ok ? "Reader terhubung" : "Reader TERPUTUS", ok ? "ok" : "err", false);
   }
   _readerOk = ok;

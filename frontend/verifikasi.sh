@@ -196,7 +196,7 @@ ada  "galat ditampilkan di baris kosong"     js/ekspor.js 'kosong\(String\(e\.me
 judul "js/sinkron.js dan js/pembaruan.js"
 ada  "sinkron: tap ditolak bernada peringatan" js/sinkron.js 'Selesaikan impor dulu", "info", "peringatan"'
 ada  "pembaruan: tap ditolak bernada peringatan" js/pembaruan.js 'Selesaikan pembaruan dulu", "info", "peringatan"'
-tepat "pembaruan: bunyi(info) hanya di otomatis()" js/pembaruan.js 'bunyi\("info"\)' 1
+tak  "pembaruan: tidak ada bunyi(info) saat mulai" js/pembaruan.js 'bunyi\("info"\)'
 minimal "pembaruan: bunyi(selesai) di pasang & hasilLinux" js/pembaruan.js 'bunyi\("selesai"\)' 2
 blok "hasilLinux: modal dibuka senyap"       js/pembaruan.js 'hasilLinux(h) {' 14 '      true'
 

@@ -6,9 +6,11 @@ frontend/wailsjs/
 
 # Log dan data lokal
 *.log
-# *.db
+*.db
 *.db-wal
 *.db-shm
+*.csv
+*.tsv
 
 # Catatan sementara
 draft.md

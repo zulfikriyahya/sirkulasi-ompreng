@@ -34,6 +34,8 @@ Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debia
 **Sistem**
 - Data lokal di SQLite, tanpa login. Internet hanya dibutuhkan untuk WhatsApp dan pembaruan
 - Pembaruan aplikasi dari GitHub Release (periksa otomatis, verifikasi checksum, cadangan database otomatis sebelum memperbarui)
+- Umpan balik suara per aksi (nada ambil, kembali, galat, dan lainnya) dengan tombol bisukan di bilah atas. Senyap saat aplikasi dibuka dan saat pindah menu atau tab; peringatan reader hanya berbunyi saat reader dicabut atau dicolok ketika aplikasi sedang berjalan
+- Tema terang/gelap, sidebar yang bisa diciutkan, dan modal konfirmasi merah untuk aksi hapus atau nonaktifkan (fokus awal di Batal, Esc membatalkan)
 
 ## Instalasi
 
@@ -42,8 +44,8 @@ Unduh dari [halaman Releases](https://github.com/zulfikriyahya/sirkulasi-ompreng
 | OS | Berkas | Cara pasang |
 |---|---|---|
 | Windows 10/11 | `mbg-amd64-installer.exe` | Jalankan installer |
-| Debian/Ubuntu | `mbg_0.3.1_amd64.deb` | `sudo apt install ./mbg_0.3.1_amd64.deb` |
-| Fedora/RHEL 10 | `mbg-0.3.1-1.x86_64.rpm` | `sudo dnf install ./mbg-0.3.1-1.x86_64.rpm` |
+| Debian/Ubuntu | `mbg_0.3.2_amd64.deb` | `sudo apt install ./mbg_0.3.2_amd64.deb` |
+| Fedora/RHEL 10 | `mbg-0.3.2-1.x86_64.rpm` | `sudo dnf install ./mbg-0.3.2-1.x86_64.rpm` |
 | Linux (portabel) | `mbg-linux-amd64` | `chmod +x mbg-linux-amd64 && ./mbg-linux-amd64` |
 
 Paket Linux memasang dependensi (GTK3 dan WebKitGTK 4.1) otomatis dan menyertakan aturan udev agar reader Espressif bisa diakses tanpa grup `dialout`. Cabut dan colok ulang reader setelah instalasi.
@@ -233,7 +235,7 @@ Build semua target:
 ```bash
 go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
-export VERSION=0.3.1
+export VERSION=0.3.2
 LDF="-X mbg/internal/versi.Versi=${VERSION}"
 
 wails build -clean -ldflags "$LDF"
@@ -259,8 +261,8 @@ Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh
 1. Tentukan nomor versi dan perbarui nomor versi lama di README. Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada string versi yang diubah di kode:
 
    ```bash
-   export VERSION=0.3.1
-   sed -i "s/0\.3\.1/${VERSION}/g" README.md   # ganti 0.3.1 dengan versi sebelumnya
+   export VERSION=0.3.2
+   sed -i "s/0\.3\.1/${VERSION}/g" README.md   # ganti 0.3.2 dengan versi sebelumnya
    ```
 
 2. Jalankan perintah di bagian **Build** (semua target) dengan `VERSION` yang sama.
