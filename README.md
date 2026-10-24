@@ -4,7 +4,7 @@ Aplikasi desktop offline untuk mencatat pengambilan dan pengembalian ompreng Mak
 
 Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debian/Ubuntu, Red Hat/Fedora).
 
-![Icon](icon.jpeg)
+![Icon](icon.png)
 
 ## Fitur
 
@@ -109,11 +109,11 @@ go install github.com/wailsapp/wails/v2/cmd/wails@latest
 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 ```
 
-Ikon (sekali saja, dari `icon.jpeg`):
+Ikon (sekali saja, dari `icon.png`):
 
 ```bash
 mkdir -p build/linux
-convert icon.jpeg -gravity center -background white -resize 1024x1024 -extent 1024x1024 build/appicon.png
+convert icon.png -background none -gravity center -resize 1024x1024 -extent 1024x1024 build/appicon.png
 convert build/appicon.png -resize 512x512 build/linux/mbg.png
 ```
 
