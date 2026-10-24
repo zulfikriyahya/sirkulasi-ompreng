@@ -93,7 +93,7 @@ const Dash = {
       : susulan
         ? `<div class="tiles"><div class="tile"><span>Diambil</span><b>${r.jumlah_ambil}</b></div><div class="tile"><span>Sudah kembali</span><b>${sudah}</b></div><div class="tile sisa"><span>Sisa</span><b>${r.sisa}</b></div></div>`
         : `<div class="tiles"><div class="tile"><span>Diambil</span><b>${r.jumlah_ambil}</b></div></div>`;
-    const min = ambil || susulan ? 1 : 0;
+    const min = 1;
     const max = susulan ? r.sisa : r.jumlah_ambil;
     const nama = ambil ? "diambil" : susulan ? "susulan" : "dikembalikan";
     this.bukaModal(`
@@ -117,7 +117,11 @@ const Dash = {
         return;
       }
       const n = parseInt(val, 10);
-      if (susulan && (n < 1 || n > r.sisa)) {
+      if (n < 1) {
+        document.getElementById("in-galat").textContent = "Jumlah minimal 1";
+        return;
+      }
+      if (susulan && n > r.sisa) {
         document.getElementById("in-galat").textContent = `Jumlah susulan harus 1 sampai ${r.sisa}`;
         return;
       }

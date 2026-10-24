@@ -208,8 +208,8 @@ func namaPengembali(tx *sql.Tx, id int64) (string, error) {
 // SubmitKembali: pengembalian awal (status AMBIL, 0..jumlah_ambil) atau susulan (status KURANG, 1..sisa).
 // Setiap pemanggilan menambah satu baris pengembalian; transaksi menyimpan total akumulasi.
 func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
-	if jumlah < 0 {
-		return errors.New("Jumlah kembali tidak boleh negatif")
+	if jumlah < 1 {
+		return errors.New("Jumlah kembali harus minimal 1")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -146,6 +146,9 @@ func (s *Service) antreanWA(q eksekutor, jenis, ref string, kelasID int64, v map
 
 // MulaiAntreanWA: dipanggil sekali dari main saat aplikasi mulai.
 func (s *Service) MulaiAntreanWA() {
+	if s.waCancel != nil {
+		return
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s.waCancel = cancel
 	go func() {
@@ -184,6 +187,8 @@ func (s *Service) prosesAntreanWA(ctx context.Context) {
 	now := s.now()
 	_, _ = s.db.Exec(`UPDATE wa_antrean SET status='GAGAL',galat='Kedaluwarsa (lebih dari 24 jam di antrean)' WHERE status='ANTRE' AND dibuat<?`,
 		waf(now.Add(-waKedaluwarsa)))
+	_, _ = s.db.Exec(`DELETE FROM wa_antrean WHERE status IN ('TERKIRIM','GAGAL') AND dibuat<?`,
+		waf(now.Add(-7*24*time.Hour)))
 	cl, err := whatsapp.New(whatsapp.Config{BaseURL: cfg.baseURL, KeyID: cfg.keyID, Secret: cfg.secret})
 	if err != nil {
 		log.Printf("WA: %v", err)
@@ -216,6 +221,9 @@ func (s *Service) prosesAntreanWA(ctx context.Context) {
 			tpl = cfg.tplKembali
 		}
 		h, err := cl.Kirim(ctx, whatsapp.Pesan{TemplateCode: tpl, Recipient: it.no, Variables: v, ReferenceID: it.ref})
+		if ctx.Err() != nil {
+			return // aplikasi ditutup: biarkan tetap ANTRE
+		}
 		t := s.now()
 		switch {
 		case err == nil:
@@ -223,7 +231,8 @@ func (s *Service) prosesAntreanWA(ctx context.Context) {
 				h.JobID, h.Status, waf(t), it.id)
 		case errors.Is(err, whatsapp.ErrAutentikasi), errors.Is(err, whatsapp.ErrDibatasi):
 			// konfigurasi/jam salah atau API key dijeda: hentikan seluruh batch, coba lagi 10 menit lagi
-			_, _ = s.db.Exec(`UPDATE wa_antrean SET galat=?,coba_lagi=? WHERE id=?`, err.Error(), waf(t.Add(10*time.Minute)), it.id)
+			_, _ = s.db.Exec(`UPDATE wa_antrean SET galat=?,coba_lagi=? WHERE status='ANTRE'`,
+				err.Error(), waf(t.Add(10*time.Minute)))
 			return
 		case whatsapp.IsSementara(err):
 			coba := it.coba + 1

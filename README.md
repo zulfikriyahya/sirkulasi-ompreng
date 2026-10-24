@@ -41,8 +41,8 @@ Unduh dari [halaman Releases](https://github.com/zulfikriyahya/sirkulasi-ompreng
 | OS | Berkas | Cara pasang |
 |---|---|---|
 | Windows 10/11 | `mbg-amd64-installer.exe` | Jalankan installer |
-| Debian/Ubuntu | `mbg_0.3.0_amd64.deb` | `sudo apt install ./mbg_0.3.0_amd64.deb` |
-| Fedora/RHEL 10 | `mbg-0.3.0-1.x86_64.rpm` | `sudo dnf install ./mbg-0.3.0-1.x86_64.rpm` |
+| Debian/Ubuntu | `mbg_0.3.1_amd64.deb` | `sudo apt install ./mbg_0.3.1_amd64.deb` |
+| Fedora/RHEL 10 | `mbg-0.3.1-1.x86_64.rpm` | `sudo dnf install ./mbg-0.3.1-1.x86_64.rpm` |
 | Linux (portabel) | `mbg-linux-amd64` | `chmod +x mbg-linux-amd64 && ./mbg-linux-amd64` |
 
 Paket Linux memasang dependensi (GTK3 dan WebKitGTK 4.1) otomatis dan menyertakan aturan udev agar reader Espressif bisa diakses tanpa grup `dialout`. Cabut dan colok ulang reader setelah instalasi.
@@ -231,7 +231,7 @@ Build semua target:
 ```bash
 go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
-export VERSION=0.3.0
+export VERSION=0.3.1
 LDF="-X mbg/internal/versi.Versi=${VERSION}"
 
 wails build -clean -ldflags "$LDF"
@@ -257,7 +257,7 @@ Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh
 1. Tentukan nomor versi dan perbarui nomor versi lama di README. Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada string versi yang diubah di kode:
 
    ```bash
-   export VERSION=0.3.0
+   export VERSION=0.3.1
    sed -i "s/0\.2\.1/${VERSION}/g" README.md   # ganti 0.2.1 dengan versi sebelumnya
    ```
 
