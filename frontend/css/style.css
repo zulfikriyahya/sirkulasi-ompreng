@@ -1495,3 +1495,74 @@ footer .hati {
         grid-template-columns: 1fr;
     }
 }
+
+.wa-grid {
+    display: grid;
+    gap: 10px;
+    max-width: 520px;
+}
+
+.wa-grid label {
+    display: grid;
+    gap: 4px;
+}
+
+.wa-cek {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+}
+
+.wa-baris {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.wa-tabel {
+    overflow: auto;
+    max-height: 360px;
+}
+
+.wa-tabel table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wa-tabel th,
+.wa-tabel td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    font-size: 13px;
+}
+
+.wa-lencana {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #fff;
+    background: #888;
+}
+
+.wa-lencana.wa-terkirim {
+    background: #2e9e5b;
+}
+
+.wa-lencana.wa-gagal {
+    background: #d64545;
+}
+
+.wa-lencana.wa-antre {
+    background: #d99a1e;
+}
+
+.wa-galat {
+    color: #d64545;
+}
+
+.wa-ok {
+    color: #2e9e5b;
+}

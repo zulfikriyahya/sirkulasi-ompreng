@@ -64,6 +64,9 @@ func Migrate(conn *sql.DB) error {
 		AND NOT EXISTS (SELECT 1 FROM pengembalian p WHERE p.transaksi_id=t.id)`); err != nil {
 		return err
 	}
+	if _, err := conn.Exec(`INSERT OR IGNORE INTO wa_config (id) VALUES (1)`); err != nil {
+		return err
+	}
 	_, err := conn.Exec(`INSERT OR IGNORE INTO pengaturan (id, jabatan_penanggung_jawab) VALUES (1, 'Penanggung Jawab MBG')`)
 	return err
 }
@@ -161,4 +164,31 @@ CREATE TABLE IF NOT EXISTS wali_kelas (
   no_wa TEXT NOT NULL,
   aktif INTEGER NOT NULL DEFAULT 1
 );
+CREATE TABLE IF NOT EXISTS wa_config (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  aktif INTEGER NOT NULL DEFAULT 0,
+  base_url TEXT NOT NULL DEFAULT 'https://whatsapp.mtsn1pandeglang.sch.id',
+  key_id TEXT NOT NULL DEFAULT '',
+  secret TEXT NOT NULL DEFAULT '',
+  template_ambil TEXT NOT NULL DEFAULT 'ompreng_ambil',
+  template_kembali TEXT NOT NULL DEFAULT 'ompreng_kembali'
+);
+CREATE TABLE IF NOT EXISTS wa_antrean (
+  id INTEGER PRIMARY KEY,
+  jenis TEXT NOT NULL,
+  reference_id TEXT NOT NULL UNIQUE,
+  wali_id INTEGER,
+  nama_wali TEXT,
+  no_wa TEXT NOT NULL,
+  variabel TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ANTRE',
+  job_id TEXT,
+  status_layanan TEXT,
+  percobaan INTEGER NOT NULL DEFAULT 0,
+  galat TEXT,
+  dibuat TEXT NOT NULL,
+  coba_lagi TEXT,
+  terkirim TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_wa_antrean_status ON wa_antrean(status, id);
 `

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -31,6 +32,9 @@ type Service struct {
 	siswaNISN  string
 	siswaNama  string
 	pemb       pembState
+
+	waWake   chan struct{}
+	waCancel context.CancelFunc
 }
 
 func New(db *sql.DB, dir string) *Service {
@@ -38,7 +42,7 @@ func New(db *sql.DB, dir string) *Service {
 }
 
 func NewWithClock(db *sql.DB, dir string, now func() time.Time) *Service {
-	return &Service{db: db, dir: dir, now: now, lastSubmit: map[int64]time.Time{}}
+	return &Service{db: db, dir: dir, now: now, lastSubmit: map[int64]time.Time{}, waWake: make(chan struct{}, 1)}
 }
 
 type InfoSistem struct {

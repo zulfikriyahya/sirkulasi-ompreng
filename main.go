@@ -62,6 +62,10 @@ func main() {
 			appCtx = ctx
 			svc.SetContext(ctx)
 			go mgr.Run(ctx)
+			svc.MulaiAntreanWA()
+		},
+		OnShutdown: func(ctx context.Context) {
+			svc.BerhentiAntreanWA()
 		},
 		Bind: []interface{}{svc},
 	})

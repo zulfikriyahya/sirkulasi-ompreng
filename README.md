@@ -1,6 +1,6 @@
 # SI'OM - Sirkulasi Ompreng MBG
 
-Aplikasi desktop offline untuk mencatat pengambilan dan pengembalian ompreng Makanan Bergizi Gratis (MBG) memakai kartu RFID. Siswa tap kartu, operator mengisi jumlah, nama pengambil dan pengembali tercatat otomatis, dan laporan diekspor ke Excel dan PDF.
+Aplikasi desktop offline-first untuk mencatat pengambilan dan pengembalian ompreng Makanan Bergizi Gratis (MBG) memakai kartu RFID. Siswa tap kartu, operator mengisi jumlah, nama pengambil dan pengembali tercatat otomatis, wali kelas dapat menerima notifikasi WhatsApp, dan laporan diekspor ke Excel dan PDF.
 
 Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debian/Ubuntu, Red Hat/Fedora).
 
@@ -8,15 +8,30 @@ Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debia
 
 ## Fitur
 
+**Pencatatan**
 - Tap kartu: pengambilan pada tap pertama, pengembalian pada tap berikutnya
+- Pengembalian susulan: status KURANG sampai jumlah kembali lengkap
 - Nama siswa pemilik kartu tampil di popup dan tercatat sebagai pengambil/pengembali
 - Reader serial (ESP32-C3 + RC522) dan reader HID (keyboard emulator), terdeteksi otomatis
 - Perlindungan tap ganda: penguncian popup, cooldown, jeda minimum ambil ke kembali
 - Validasi: jumlah kembali tidak boleh melebihi jumlah ambil
 - Tutup hari dengan catatan, dan buka kembali bila perlu
 - Edit dan hapus transaksi dengan alasan wajib, tercatat di audit log
+
+**Notifikasi WhatsApp ke wali kelas**
+- Pesan otomatis ke wali kelas saat kelasnya mengambil dan mengembalikan ompreng
+- Memakai antrean di database: operator tidak menunggu jaringan dan pesan tidak hilang saat internet putus
+- Uji kirim, riwayat notifikasi, dan tombol Ulangi untuk pesan gagal
+- Detail di bagian [Notifikasi WhatsApp](#notifikasi-whatsapp)
+
+**Master data dan laporan**
+- Master data: instansi, kelas, wali kelas, kartu RFID
+- Sinkronisasi master data antar komputer: ekspor/impor Excel dan CSV dengan pratinjau sebelum diterapkan
 - Ekspor laporan formal ke Excel dan PDF (A4 landscape, kop dan logo instansi, kolom Pengambil dan Pengembali, baris merah untuk kekurangan)
-- Data lokal di SQLite, tanpa login dan tanpa internet
+- Audit log untuk setiap perubahan data
+
+**Sistem**
+- Data lokal di SQLite, tanpa login. Internet hanya dibutuhkan untuk WhatsApp dan pembaruan
 - Pembaruan aplikasi dari GitHub Release (periksa otomatis, verifikasi checksum, cadangan database otomatis sebelum memperbarui)
 
 ## Instalasi
@@ -26,23 +41,94 @@ Unduh dari [halaman Releases](https://github.com/zulfikriyahya/sirkulasi-ompreng
 | OS | Berkas | Cara pasang |
 |---|---|---|
 | Windows 10/11 | `mbg-amd64-installer.exe` | Jalankan installer |
-| Debian/Ubuntu | `mbg_0.2.1_amd64.deb` | `sudo apt install ./mbg_0.2.1_amd64.deb` |
-| Fedora/RHEL 10 | `mbg-0.2.1-1.x86_64.rpm` | `sudo dnf install ./mbg-0.2.1-1.x86_64.rpm` |
+| Debian/Ubuntu | `mbg_0.3.0_amd64.deb` | `sudo apt install ./mbg_0.3.0_amd64.deb` |
+| Fedora/RHEL 10 | `mbg-0.3.0-1.x86_64.rpm` | `sudo dnf install ./mbg-0.3.0-1.x86_64.rpm` |
 | Linux (portabel) | `mbg-linux-amd64` | `chmod +x mbg-linux-amd64 && ./mbg-linux-amd64` |
 
-Paket Linux memasang dependensi (GTK3 dan WebKitGTK 4.1) otomatis dan menyertakan aturan udev agar reader bisa diakses tanpa grup `dialout`. Cabut dan colok ulang reader setelah instalasi.
+Paket Linux memasang dependensi (GTK3 dan WebKitGTK 4.1) otomatis dan menyertakan aturan udev agar reader Espressif bisa diakses tanpa grup `dialout`. Cabut dan colok ulang reader setelah instalasi.
 
 Windows memakai WebView2 (sudah ada di Windows 10/11 terbaru; installer menyertakannya bila belum ada).
 
 ## Penggunaan
 
-1. **Master Data > Instansi**: isi nama, alamat, penanggung jawab, NIP, jabatan, dan unggah logo.
-2. **Master Data > Kelas & Ketua**: tambahkan semua kelas.
-3. **Master Data > Kartu RFID**: pilih kelas, tap kartu (atau ketik UID), isi NISN dan nama siswa (opsional), lalu Daftarkan.
-4. **Beranda**: siswa tap kartu, operator mengisi jumlah, Submit. Tap lagi saat mengembalikan. Pengambil dan pengembali boleh berbeda orang.
-5. Setelah semua kelas selesai (atau hari ditutup), klik **Cetak PDF**. Rentang tanggal tersedia di tab **Ekspor**.
+1. **Master Data > Pengaturan**: isi nama, alamat, penanggung jawab, NIP, jabatan, dan unggah logo.
+2. **Master Data > Kelas**: tambahkan semua kelas beserta ketua murid.
+3. **Master Data > Wali Kelas**: tambahkan wali kelas dan nomor WhatsApp-nya, lalu pilih wali untuk tiap kelas di tab **Kelas**.
+4. **Master Data > Kartu RFID**: pilih kelas, tap kartu (atau ketik UID), isi NISN dan nama siswa (opsional), lalu Daftarkan.
+5. **Master Data > WhatsApp** (opsional): atur notifikasi, lihat [Notifikasi WhatsApp](#notifikasi-whatsapp).
+6. **Beranda**: siswa tap kartu, operator mengisi jumlah, Submit. Tap lagi saat mengembalikan. Pengambil dan pengembali boleh berbeda orang.
+7. Setelah semua kelas selesai (atau hari ditutup), klik **Cetak PDF**. Rentang tanggal tersedia di tab **Ekspor**.
 
 Kartu tanpa NISN dan nama (kartu kelas) tetap berfungsi; kolom pengambil/pengembali menampilkan "-".
+
+## Notifikasi WhatsApp
+
+Aplikasi mengirim pesan lewat layanan WhatsApp milik instansi (`POST /api/v1/messages`) dengan autentikasi HMAC-SHA256. Fitur ini nonaktif secara bawaan.
+
+### Cara kerja
+
+1. Setelah **Submit ambil** atau **Submit kembali** berhasil tersimpan, pesan dimasukkan ke tabel antrean (`wa_antrean`).
+2. Worker di latar belakang mengirim antrean setiap 20 detik, atau segera setelah ada pesan baru.
+3. Pencatatan ompreng tidak pernah gagal karena WhatsApp: galat antrean hanya dicatat ke log.
+
+Aturan pengiriman:
+
+| Kondisi | Perilaku |
+|---|---|
+| Kelas belum punya wali aktif | Tidak ada pesan |
+| Fitur WhatsApp nonaktif | Tidak ada pesan |
+| Jaringan putus atau server 5xx | Dicoba ulang dengan jeda 2, 4, 8, ... menit (maksimal 1 jam), hingga 8 kali, lalu GAGAL |
+| API key salah (401) atau dijeda (429) | Seluruh batch ditahan, dicoba lagi 10 menit kemudian |
+| Ditolak layanan (mis. variabel template kurang) | Langsung GAGAL |
+| Lebih dari 24 jam di antrean | GAGAL (kedaluwarsa), agar wali tidak kebanjiran pesan lama |
+
+Setiap pesan memakai `reference_id` unik (`mbg-ambil-<id transaksi>`, `mbg-kembali-<id pengembalian>`), sehingga tidak ada pesan ganda. Pesan GAGAL bisa dikirim ulang dengan tombol **Ulangi** di riwayat notifikasi. Koreksi lewat menu Riwayat (edit/hapus transaksi) tidak mengirim pesan.
+
+### Persiapan di dashboard layanan
+
+1. Siapkan API key (Key ID dan Secret).
+2. Buat dua template (Menu **Template**, prioritas Medium, minimal 2 varian per template) dan kaitkan ke API key tersebut.
+
+| Kode bawaan | Variabel wajib |
+|---|---|
+| `ompreng_ambil` | `nama_wali,kelas,ketua,pengambil,jumlah_ambil,tanggal,jam,instansi` |
+| `ompreng_kembali` | `nama_wali,kelas,ketua,jenis,pengembali,jumlah_ambil,jumlah_kembali,total_kembali,sisa,status,tanggal,jam,instansi` |
+
+Varian `ompreng_ambil` (minimal 2):
+
+```
+Assalamualaikum {{nama_wali}}, kelas {{kelas}} telah mengambil {{jumlah_ambil}} ompreng pada {{tanggal}} pukul {{jam}}. Diambil oleh {{pengambil}}. Terima kasih.
+```
+```
+Yth. {{nama_wali}}, ompreng kelas {{kelas}} sejumlah {{jumlah_ambil}} sudah diambil {{pengambil}} pada {{tanggal}} pukul {{jam}}. Salam dari {{instansi}}.
+```
+
+Varian `ompreng_kembali` (minimal 2):
+
+```
+{{jenis}} kelas {{kelas}} pada {{tanggal}} pukul {{jam}}: {{jumlah_kembali}} ompreng dikembalikan oleh {{pengembali}}. Total kembali {{total_kembali}} dari {{jumlah_ambil}} ompreng. Status: {{status}}.
+```
+```
+Halo {{nama_wali}}, ada {{jenis}} untuk kelas {{kelas}} ({{tanggal}}, {{jam}}). Total sudah kembali {{total_kembali}} dari {{jumlah_ambil}}, sisa {{sisa}}. Status: {{status}}.
+```
+
+Arti variabel:
+- `jumlah_kembali`: jumlah pada pengembalian kali ini. `total_kembali`: akumulasi hari itu. `sisa`: jumlah yang belum kembali.
+- `status`: `Lengkap` atau `Kurang N Ompreng`.
+- `jenis`: `Pengembalian` atau `Pengembalian susulan`.
+- Variabel yang kosong dikirim sebagai `-`.
+
+Validator layanan menolak huruf kapital berlebihan, `!!` berurutan, dan lebih dari satu tautan per varian. Kode template bisa diubah di aplikasi.
+
+### Pengaturan di aplikasi
+
+Buka **Master Data > WhatsApp**, isi alamat layanan, Key ID, Secret, dan kode kedua template, centang **Aktifkan**, lalu **Simpan**. Kirim **pesan uji** ke nomor Anda untuk memastikan kredensial dan template benar (uji memakai template pengambilan; template pengembalian baru teruji pada pengembalian sungguhan).
+
+Secret tidak pernah ditampilkan kembali di antarmuka; kosongkan kolomnya untuk mempertahankan secret lama.
+
+### Keterbatasan saat ini
+
+Kolom Keterangan menampilkan status saat pesan diterima layanan (mis. `queued`). Status lanjutan (`sent`, `delivered`, `read`) belum ditarik otomatis dari `GET /api/v1/messages/{job_id}`.
 
 ## Data
 
@@ -51,11 +137,11 @@ Kartu tanpa NISN dan nama (kartu kelas) tetap berfungsi; kolom pengambil/pengemb
 | Linux | `~/.local/share/mbg/mbg.db` |
 | Windows | `%APPDATA%\MBG\mbg.db` |
 
-Data tidak terhapus saat update atau uninstall. Kolom baru ditambahkan otomatis saat aplikasi dibuka, jadi database versi lama tetap kompatibel.
+Data tidak terhapus saat update atau uninstall. Kolom dan tabel baru ditambahkan otomatis saat aplikasi dibuka, jadi database versi lama tetap kompatibel.
 
 Untuk mengosongkan, tutup aplikasi lalu hapus `mbg.db`, `mbg.db-wal`, dan `mbg.db-shm`.
 
-Data: cadangan otomatis tersimpan di cadangan/ dalam folder data (~/.local/share/mbg/cadangan/ atau %APPDATA%\MBG\cadangan\), lima terakhir.
+Cadangan otomatis (dibuat sebelum pembaruan) tersimpan di folder `cadangan/` dalam folder data (`~/.local/share/mbg/cadangan/` atau `%APPDATA%\MBG\cadangan\`), lima terakhir.
 
 ### Cadangan dan pemindahan database
 
@@ -67,9 +153,30 @@ sqlite3 ~/.local/share/mbg/mbg.db ".backup /lokasi/cadangan/mbg.db"
 
 Saat menimpa database di komputer lain, hapus dulu `mbg.db-wal` dan `mbg.db-shm` di folder tujuan.
 
+### Sinkronisasi master data
+
+Di **Master Data > Pengaturan** tersedia ekspor (Excel, atau CSV per jenis: kelas, kartu, wali), template impor kosong, dan impor.
+
+- Excel memuat sheet Pengaturan, Kelas, Kartu, dan Wali. CSV dikenali dari header kolomnya.
+- Impor selalu menampilkan pratinjau dan tidak menulis apa pun sebelum **Terapkan**. Seluruh impor berjalan dalam satu transaksi.
+- Mode **Gabung** hanya menambah dan memperbarui. Mode **Ganti** juga menghapus kartu serta menonaktifkan kelas dan wali yang tidak ada di berkas (butuh konfirmasi dan alasan).
+- Logo, port serial, ambang HID, dan konfigurasi WhatsApp tidak ikut disinkronkan.
+- Ekspor menolak disimpan di dalam folder repositori git.
+
 ### Privasi
 
-`mbg.db` berisi NISN dan nama siswa. Jangan memasukkannya ke repositori atau rilis publik. File `.db`, `.csv`, dan `.tsv` data siswa sebaiknya masuk `.gitignore`.
+- `mbg.db` berisi NISN, nama siswa, nomor WhatsApp wali, dan **Secret API WhatsApp (tersimpan sebagai teks biasa)**. Berkas cadangan juga memuatnya. Jangan memasukkan database atau cadangan ke repositori, rilis publik, atau folder yang dibagikan.
+- Berkas ekspor kartu berisi NISN dan nama siswa; hapus setelah dipakai.
+- Sebaiknya `.gitignore` memuat `*.db`, `*.csv`, `*.tsv`, dan `*.xlsx` data siswa.
+- Secret tidak masuk audit log dan tidak ikut ekspor sinkronisasi.
+
+## Pembaruan aplikasi
+
+Di **Master Data > Pengaturan** tersedia tombol **Periksa pembaruan**, opsi periksa otomatis, dan opsi pra-rilis. Saat memasang pembaruan, aplikasi:
+
+1. mencadangkan database,
+2. mengunduh berkas rilis dan memverifikasi ukuran serta checksum SHA256 (`checksums.txt`),
+3. Windows: menjalankan installer dan menutup aplikasi. Linux: menampilkan perintah `sudo apt/dnf install ...` untuk dijalankan sendiri (sudo tidak dijalankan otomatis).
 
 ## Firmware reader
 
@@ -93,9 +200,11 @@ Prasyarat: Go, Node.js/npm, Wails CLI, dan di Linux `libgtk-3-dev` serta `libweb
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
-go vet ./... && go test ./...
+gofmt -l internal && go build ./... && go vet ./... && go test ./...
 wails dev
 ```
+
+Binding Go ke frontend dibuat otomatis oleh `wails dev` (`frontend/wailsjs`). Frontend memakai HTML/CSS/JS vanilla tanpa langkah build.
 
 ## Build
 
@@ -122,7 +231,7 @@ Build semua target:
 ```bash
 go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
-export VERSION=0.2.1
+export VERSION=0.3.0
 LDF="-X mbg/internal/versi.Versi=${VERSION}"
 
 wails build -clean -ldflags "$LDF"
@@ -145,11 +254,11 @@ Catatan: `nfpm.yaml` mengambil binary Linux dari `dist/mbg-linux-amd64`, jadi bu
 
 Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh auth login`).
 
-1. Tentukan nomor versi (contoh `0.2.1`). Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada lagi string versi yang diubah di kode:
+1. Tentukan nomor versi dan perbarui nomor versi lama di README. Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada string versi yang diubah di kode:
 
    ```bash
-   export VERSION=0.2.1
-   sed -i "s/0\.4\.0/${VERSION}/g" README.md
+   export VERSION=0.3.0
+   sed -i "s/0\.2\.1/${VERSION}/g" README.md   # ganti 0.2.1 dengan versi sebelumnya
    ```
 
 2. Jalankan perintah di bagian **Build** (semua target) dengan `VERSION` yang sama.
@@ -197,12 +306,23 @@ Hasil `v${VERSION}^{}` harus menunjuk ke commit `HEAD`, dan ukuran aset sama den
 ## Struktur
 
 ```
-main.go            entry Wails
-internal/          db, model, service, reader, export, timeutil
-frontend/          HTML/CSS/JS vanilla
-firmware/          sketch ESP32-C3 + RC522
-build/             ikon, aturan udev, berkas paket
-dist/              hasil build (tidak masuk git)
+main.go                  entry Wails
+internal/
+  db/                    koneksi SQLite, skema, migrasi
+  model/                 struktur data
+  service/               logika aplikasi (transaksi, hari, master, wali,
+                         sinkron, ekspor, pembaruan, antrean WhatsApp)
+  reader/                reader serial dan normalisasi UID
+  whatsapp/              klien API WhatsApp (HMAC-SHA256)
+  sinkron/               baca/tulis berkas impor-ekspor xlsx/csv
+  pembaruan/             klien GitHub Release, semver, checksum
+  export/                laporan Excel dan PDF
+  timeutil/              format tanggal dan waktu (WIB)
+  versi/                 nomor versi (disuntik saat build)
+frontend/                HTML/CSS/JS vanilla
+firmware/                sketch ESP32-C3 + RC522
+build/                   ikon, aturan udev, berkas paket
+dist/                    hasil build (tidak masuk git)
 ```
 
 ## Lisensi

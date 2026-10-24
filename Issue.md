@@ -1,7 +1,7 @@
 ## Struktur Project
 
 ```bash
-sirkulasi-ompreng on main ≡  ?2 ~3
+sirkulasi-ompreng on main ≡  ?3 ~6
 ➜ tree
 .
 ├── build
@@ -93,13 +93,20 @@ sirkulasi-ompreng on main ≡  ?2 ~3
 │   │   ├── sinkron_test.go
 │   │   ├── susulan_test.go
 │   │   ├── tahap5_test.go
-│   │   └── transaksi.go
+│   │   ├── transaksi.go
+│   │   ├── wa.go
+│   │   ├── wali.go
+│   │   ├── wali_test.go
+│   │   └── wa_test.go
 │   ├── sinkron
 │   │   └── sinkron.go
 │   ├── timeutil
 │   │   └── timeutil.go
-│   └── versi
-│       └── versi.go
+│   ├── versi
+│   │   └── versi.go
+│   └── whatsapp
+│       ├── client.go
+│       └── client_test.go
 ├── Issue.md
 ├── LICENSE
 ├── main.go
@@ -107,16 +114,12 @@ sirkulasi-ompreng on main ≡  ?2 ~3
 ├── README.md
 └── wails.json
 
-28 directories, 75 files
-sirkulasi-ompreng on main ≡  ?2 ~3
+29 directories, 81 files
+sirkulasi-ompreng on main ≡  ?3 ~6
 ➜
 ```
 
 ## Issues
-- gunakan icon pada frontend/images/icon.ico aplikasi ketimbang icon "M"
-- gunakan sidebar ketimbang top navbar
-- sidebar dapat dicollapse
-- tambahkan data wali kelas
 - tambahkan fitur notifikasi whatsapp yang dikirimkan ke wali kelas
 - layanan whatsapp (https://whatsapp.mtsn1pandeglang.sch.id/api/v1/messages)
 
@@ -182,3 +185,609 @@ Dikirim aplikasi eksternal via field "variables":
 Contoh lain untuk kategori OTP (prioritas High, variabel wajib: kode_otp,durasi_menit):
 "Kode OTP Anda: {{kode_otp}}. Berlaku {{durasi_menit}} menit, jangan bagikan ke siapa pun."
 ```
+
+## Percakapan sebelumnya:
+Pesan masuk ke antrean (outbox) di database, lalu dikirim oleh worker latar belakang. Operator tidak menunggu jaringan, dan pesan tidak hilang kalau internet putus.
+
+- Antrean diisi **setelah** `SubmitAmbil` dan `SubmitKembali` berhasil commit. Kalau pengisian antrean gagal, pencatatan ompreng tetap aman.
+- Pesan hanya dibuat jika fitur WhatsApp aktif dan kelas punya wali aktif.
+- `reference_id` unik per kejadian (`mbg-ambil-<id transaksi>`, `mbg-kembali-<id pengembalian>`), jadi tidak ada pesan ganda.
+- Pesan yang lebih dari 24 jam di antrean ditandai gagal, supaya wali tidak kebanjiran pesan lama saat internet kembali.
+
+## 1. `internal/model/model.go`: tambahkan
+
+```go
+type WAConfig struct {
+	Aktif           bool   `json:"aktif"`
+	BaseURL         string `json:"base_url"`
+	KeyID           string `json:"key_id"`
+	Secret          string `json:"secret"`      // hanya masuk; tidak pernah dikirim balik ke UI
+	SecretAda       bool   `json:"secret_ada"`  // true bila secret sudah tersimpan
+	TemplateAmbil   string `json:"template_ambil"`
+	TemplateKembali string `json:"template_kembali"`
+}
+```
+
+## 2. `internal/db/db.go`
+
+Tambahkan di akhir `schema` (sebelum backtick penutup):
+
+```sql
+CREATE TABLE IF NOT EXISTS wa_config (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  aktif INTEGER NOT NULL DEFAULT 0,
+  base_url TEXT NOT NULL DEFAULT 'https://whatsapp.mtsn1pandeglang.sch.id',
+  key_id TEXT NOT NULL DEFAULT '',
+  secret TEXT NOT NULL DEFAULT '',
+  template_ambil TEXT NOT NULL DEFAULT 'ompreng_ambil',
+  template_kembali TEXT NOT NULL DEFAULT 'ompreng_kembali'
+);
+CREATE TABLE IF NOT EXISTS wa_antrean (
+  id INTEGER PRIMARY KEY,
+  jenis TEXT NOT NULL,
+  reference_id TEXT NOT NULL UNIQUE,
+  wali_id INTEGER,
+  nama_wali TEXT,
+  no_wa TEXT NOT NULL,
+  variabel TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ANTRE',
+  job_id TEXT,
+  status_layanan TEXT,
+  percobaan INTEGER NOT NULL DEFAULT 0,
+  galat TEXT,
+  dibuat TEXT NOT NULL,
+  coba_lagi TEXT,
+  terkirim TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_wa_antrean_status ON wa_antrean(status, id);
+```
+
+Di `Migrate`, tepat sebelum `_, err := conn.Exec(`INSERT OR IGNORE INTO pengaturan ...`)`:
+
+```go
+	if _, err := conn.Exec(`INSERT OR IGNORE INTO wa_config (id) VALUES (1)`); err != nil {
+		return err
+	}
+```
+
+## 3. `internal/service/service.go`
+
+Tambahkan `"context"` ke import. Di struct `Service`, tambahkan dua field:
+
+```go
+	waWake   chan struct{}
+	waCancel context.CancelFunc
+```
+
+Ubah `NewWithClock`:
+
+```go
+func NewWithClock(db *sql.DB, dir string, now func() time.Time) *Service {
+	return &Service{db: db, dir: dir, now: now, lastSubmit: map[int64]time.Time{}, waWake: make(chan struct{}, 1)}
+}
+```
+
+## 4. File baru `internal/service/wa.go`
+
+```go
+package service
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"mbg/internal/model"
+	"mbg/internal/whatsapp"
+)
+
+const (
+	waMaksPercobaan = 8
+	waKedaluwarsa   = 24 * time.Hour
+)
+
+type eksekutor interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
+type waCfg struct {
+	aktif                       bool
+	baseURL, keyID, secret      string
+	tplAmbil, tplKembali        string
+}
+
+func bacaWACfg(q interface {
+	QueryRow(string, ...any) *sql.Row
+}) (waCfg, error) {
+	var c waCfg
+	var a int
+	err := q.QueryRow(`SELECT aktif,base_url,key_id,secret,template_ambil,template_kembali FROM wa_config WHERE id=1`).
+		Scan(&a, &c.baseURL, &c.keyID, &c.secret, &c.tplAmbil, &c.tplKembali)
+	c.aktif = a == 1
+	return c, err
+}
+
+func nonKosong(s string) string {
+	if s = strings.TrimSpace(s); s == "" {
+		return "-"
+	}
+	return s
+}
+
+func waf(t time.Time) string { return t.UTC().Format(time.RFC3339) }
+
+// ---------- konfigurasi ----------
+
+func (s *Service) GetWAConfig() (model.WAConfig, error) {
+	c, err := bacaWACfg(s.db)
+	if err != nil {
+		return model.WAConfig{}, err
+	}
+	return model.WAConfig{Aktif: c.aktif, BaseURL: c.baseURL, KeyID: c.keyID, SecretAda: c.secret != "",
+		TemplateAmbil: c.tplAmbil, TemplateKembali: c.tplKembali}, nil
+}
+
+// SimpanWAConfig: Secret kosong berarti secret lama dipertahankan.
+func (s *Service) SimpanWAConfig(c model.WAConfig) error {
+	lama, err := bacaWACfg(s.db)
+	if err != nil {
+		return err
+	}
+	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
+	c.KeyID = strings.TrimSpace(c.KeyID)
+	c.TemplateAmbil = strings.TrimSpace(c.TemplateAmbil)
+	c.TemplateKembali = strings.TrimSpace(c.TemplateKembali)
+	secret := strings.TrimSpace(c.Secret)
+	if secret == "" {
+		secret = lama.secret
+	}
+	if c.Aktif {
+		if _, err := whatsapp.New(whatsapp.Config{BaseURL: c.BaseURL, KeyID: c.KeyID, Secret: secret}); err != nil {
+			return err
+		}
+		if c.TemplateAmbil == "" || c.TemplateKembali == "" {
+			return errors.New("Kode template pengambilan dan pengembalian wajib diisi")
+		}
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE wa_config SET aktif=?,base_url=?,key_id=?,secret=?,template_ambil=?,template_kembali=? WHERE id=1`,
+		boolInt(c.Aktif), c.BaseURL, c.KeyID, secret, c.TemplateAmbil, c.TemplateKembali); err != nil {
+		return err
+	}
+	// secret sengaja tidak dicatat di audit log
+	if err := s.audit(tx, s.now(), "UBAH", "wa_config", "1",
+		map[string]any{"aktif": lama.aktif, "base_url": lama.baseURL, "key_id": lama.keyID, "template_ambil": lama.tplAmbil, "template_kembali": lama.tplKembali},
+		map[string]any{"aktif": c.Aktif, "base_url": c.BaseURL, "key_id": c.KeyID, "template_ambil": c.TemplateAmbil, "template_kembali": c.TemplateKembali, "secret_diubah": strings.TrimSpace(c.Secret) != ""},
+		""); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	select {
+	case s.waWake <- struct{}{}:
+	default:
+	}
+	return nil
+}
+
+// ---------- mengisi antrean ----------
+
+// antreanWA: best-effort, dipanggil SETELAH transaksi pencatatan commit.
+// Galat hanya dicatat ke log agar tidak pernah menggagalkan pencatatan ompreng.
+func (s *Service) antreanWA(q eksekutor, jenis, ref string, kelasID int64, v map[string]string) {
+	cfg, err := bacaWACfg(q)
+	if err != nil || !cfg.aktif {
+		return
+	}
+	var wid int64
+	var wali, no, kelas, ketua string
+	err = q.QueryRow(`SELECT w.id,w.nama,w.no_wa,k.nama,k.nama_ketua FROM kelas k
+		JOIN wali_kelas w ON w.id=k.wali_kelas_id WHERE k.id=? AND w.aktif=1`, kelasID).
+		Scan(&wid, &wali, &no, &kelas, &ketua)
+	if err != nil {
+		return // kelas belum punya wali aktif
+	}
+	var inst string
+	_ = q.QueryRow(`SELECT COALESCE(nama_instansi,'') FROM pengaturan WHERE id=1`).Scan(&inst)
+	v["nama_wali"], v["kelas"], v["ketua"], v["instansi"] = wali, kelas, nonKosong(ketua), nonKosong(inst)
+	b, _ := json.Marshal(v)
+	if _, err := q.Exec(`INSERT OR IGNORE INTO wa_antrean (jenis,reference_id,wali_id,nama_wali,no_wa,variabel,dibuat) VALUES (?,?,?,?,?,?,?)`,
+		jenis, ref, wid, wali, no, string(b), waf(s.now())); err != nil {
+		log.Printf("antrean WA: %v", err)
+		return
+	}
+	select {
+	case s.waWake <- struct{}{}:
+	default:
+	}
+}
+
+// ---------- worker ----------
+
+// MulaiAntreanWA: dipanggil sekali dari main saat aplikasi mulai.
+func (s *Service) MulaiAntreanWA() {
+	ctx, cancel := context.WithCancel(context.Background())
+	s.waCancel = cancel
+	go func() {
+		t := time.NewTicker(20 * time.Second)
+		defer t.Stop()
+		for {
+			s.prosesAntreanWA(ctx)
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+			case <-s.waWake:
+			}
+		}
+	}()
+}
+
+func (s *Service) BerhentiAntreanWA() {
+	if s.waCancel != nil {
+		s.waCancel()
+	}
+}
+
+type itemWA struct {
+	id        int64
+	jenis, no string
+	vars, ref string
+	coba      int
+}
+
+func (s *Service) prosesAntreanWA(ctx context.Context) {
+	cfg, err := bacaWACfg(s.db)
+	if err != nil || !cfg.aktif {
+		return
+	}
+	now := s.now()
+	_, _ = s.db.Exec(`UPDATE wa_antrean SET status='GAGAL',galat='Kedaluwarsa (lebih dari 24 jam di antrean)' WHERE status='ANTRE' AND dibuat<?`,
+		waf(now.Add(-waKedaluwarsa)))
+	cl, err := whatsapp.New(whatsapp.Config{BaseURL: cfg.baseURL, KeyID: cfg.keyID, Secret: cfg.secret})
+	if err != nil {
+		log.Printf("WA: %v", err)
+		return
+	}
+	rows, err := s.db.Query(`SELECT id,jenis,no_wa,variabel,reference_id,percobaan FROM wa_antrean
+		WHERE status='ANTRE' AND (coba_lagi IS NULL OR coba_lagi<=?) ORDER BY id LIMIT 20`, waf(now))
+	if err != nil {
+		return
+	}
+	var items []itemWA
+	for rows.Next() { // dibaca habis dulu: koneksi database hanya satu
+		var it itemWA
+		if err := rows.Scan(&it.id, &it.jenis, &it.no, &it.vars, &it.ref, &it.coba); err != nil {
+			rows.Close()
+			return
+		}
+		items = append(items, it)
+	}
+	rows.Close()
+
+	for _, it := range items {
+		if ctx.Err() != nil {
+			return
+		}
+		var v map[string]string
+		_ = json.Unmarshal([]byte(it.vars), &v)
+		tpl := cfg.tplAmbil
+		if it.jenis == "KEMBALI" {
+			tpl = cfg.tplKembali
+		}
+		h, err := cl.Kirim(ctx, whatsapp.Pesan{TemplateCode: tpl, Recipient: it.no, Variables: v, ReferenceID: it.ref})
+		t := s.now()
+		switch {
+		case err == nil:
+			_, _ = s.db.Exec(`UPDATE wa_antrean SET status='TERKIRIM',job_id=?,status_layanan=?,galat=NULL,terkirim=?,percobaan=percobaan+1 WHERE id=?`,
+				h.JobID, h.Status, waf(t), it.id)
+		case errors.Is(err, whatsapp.ErrAutentikasi), errors.Is(err, whatsapp.ErrDibatasi):
+			// konfigurasi/jam salah atau API key dijeda: hentikan seluruh batch, coba lagi 10 menit lagi
+			_, _ = s.db.Exec(`UPDATE wa_antrean SET galat=?,coba_lagi=? WHERE id=?`, err.Error(), waf(t.Add(10*time.Minute)), it.id)
+			return
+		case whatsapp.IsSementara(err):
+			coba := it.coba + 1
+			if coba >= waMaksPercobaan {
+				_, _ = s.db.Exec(`UPDATE wa_antrean SET status='GAGAL',galat=?,percobaan=? WHERE id=?`, err.Error(), coba, it.id)
+			} else {
+				d := time.Duration(1<<coba) * time.Minute
+				if d > time.Hour {
+					d = time.Hour
+				}
+				_, _ = s.db.Exec(`UPDATE wa_antrean SET galat=?,percobaan=?,coba_lagi=? WHERE id=?`, err.Error(), coba, waf(t.Add(d)), it.id)
+			}
+			return // jaringan/server bermasalah: jangan menghabiskan timeout per pesan
+		default:
+			_, _ = s.db.Exec(`UPDATE wa_antrean SET status='GAGAL',galat=?,percobaan=percobaan+1 WHERE id=?`, err.Error(), it.id)
+			log.Printf("WA %s ditolak: %v", it.ref, err)
+		}
+	}
+}
+
+func teksStatusKembali(sisa int) string {
+	if sisa > 0 {
+		return fmt.Sprintf("Kurang %d Ompreng", sisa)
+	}
+	return "Lengkap"
+}
+```
+
+## 5. `internal/service/transaksi.go`
+
+**a. `SubmitAmbil`:** tepat setelah blok `if err := tx.Commit(); err != nil { return err }`, sebelum `s.lastSubmit[kelasID] = now`, sisipkan:
+
+```go
+	s.antreanWA(s.db, "AMBIL", "mbg-ambil-"+itoa(id), kelasID, map[string]string{
+		"pengambil":    nonKosong(s.siswaNama),
+		"jumlah_ambil": strconv.Itoa(jumlah),
+		"tanggal":      timeutil.HariTanggalIndo(now),
+		"jam":          timeutil.Jam(now),
+	})
+```
+
+**b. `SubmitKembali`:** ganti insert pengembalian agar `id`-nya tertangkap:
+
+```go
+	resP, err := tx.Exec(`INSERT INTO pengembalian (transaksi_id,waktu,jumlah,nisn,nama_siswa) VALUES (?,?,?,?,?)`,
+		id, jam, jumlah, s.siswaNISN, s.siswaNama)
+	if err != nil {
+		return err
+	}
+	pid, _ := resP.LastInsertId()
+```
+
+Lalu setelah `tx.Commit()`, sebelum `if statusBaru == "KURANG" {`, sisipkan:
+
+```go
+	sisa := jAmbil - total
+	jenisKembali := "Pengembalian"
+	if susulan {
+		jenisKembali = "Pengembalian susulan"
+	}
+	s.antreanWA(s.db, "KEMBALI", "mbg-kembali-"+itoa(pid), kelasID, map[string]string{
+		"jenis":          jenisKembali,
+		"pengembali":     nonKosong(s.siswaNama),
+		"jumlah_ambil":   strconv.Itoa(jAmbil),
+		"jumlah_kembali": strconv.Itoa(jumlah),
+		"total_kembali":  strconv.Itoa(total),
+		"sisa":           strconv.Itoa(sisa),
+		"status":         teksStatusKembali(sisa),
+		"tanggal":        timeutil.HariTanggalIndo(now),
+		"jam":            jam,
+	})
+```
+
+## 6. File baru `internal/service/wa_test.go`
+
+```go
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"mbg/internal/db"
+	"mbg/internal/model"
+	"mbg/internal/timeutil"
+)
+
+func TestAntreanWA(t *testing.T) {
+	var diterima []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		var m map[string]any
+		_ = json.Unmarshal(b, &m)
+		diterima = append(diterima, m)
+		w.Write([]byte(`{"data":{"job_id":"job_1","status":"queued"}}`))
+	}))
+	defer srv.Close()
+
+	conn, err := db.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	s := NewWithClock(conn, t.TempDir(), func() time.Time {
+		return time.Date(2026, 10, 24, 7, 15, 0, 0, timeutil.WIB)
+	})
+	if err := s.SimpanWAConfig(model.WAConfig{Aktif: true, BaseURL: srv.URL, KeyID: "k", Secret: "s",
+		TemplateAmbil: "ompreng_ambil", TemplateKembali: "ompreng_kembali"}); err != nil {
+		t.Fatal(err)
+	}
+	kA, _ := s.TambahKelas("VII A", "Andi", 1)
+	kB, _ := s.TambahKelas("VII B", "Budi", 2) // tanpa wali
+	wid, err := s.TambahWaliKelas("Bu Siti", "0812-3456-7890")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetWaliKelas(kA, wid); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SubmitAmbil(kA, 30); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SubmitAmbil(kB, 25); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SubmitKembali(kA, 28); err != nil {
+		t.Fatal(err)
+	}
+
+	var n int
+	_ = conn.QueryRow(`SELECT COUNT(*) FROM wa_antrean`).Scan(&n)
+	if n != 2 {
+		t.Fatalf("antrean = %d, want 2 (kelas tanpa wali tidak boleh masuk)", n)
+	}
+	s.prosesAntreanWA(context.Background())
+	s.prosesAntreanWA(context.Background()) // kedua kali tidak boleh mengirim ulang
+	if len(diterima) != 2 {
+		t.Fatalf("terkirim = %d, want 2", len(diterima))
+	}
+	if diterima[0]["template_code"] != "ompreng_ambil" || diterima[0]["recipient"] != "6281234567890" {
+		t.Errorf("pesan pertama salah: %v", diterima[0])
+	}
+	v := diterima[1]["variables"].(map[string]any)
+	if diterima[1]["template_code"] != "ompreng_kembali" || v["total_kembali"] != "28" || v["sisa"] != "2" || v["status"] != "Kurang 2 Ompreng" {
+		t.Errorf("pesan kembali salah: %v", diterima[1])
+	}
+	_ = conn.QueryRow(`SELECT COUNT(*) FROM wa_antrean WHERE status='TERKIRIM'`).Scan(&n)
+	if n != 2 {
+		t.Errorf("TERKIRIM = %d, want 2", n)
+	}
+}
+```
+
+## 7. `main.go`
+
+Saya belum melihat `main.go`, jadi tempatnya perlu disesuaikan. Panggil di callback `OnStartup` (setelah konteks Wails diset ke service) dan `OnShutdown`:
+
+```go
+svc.MulaiAntreanWA()      // di OnStartup
+svc.BerhentiAntreanWA()   // di OnShutdown
+```
+
+Kalau ragu menaruhnya di mana, kirim `main.go`.
+
+## 8. Template yang perlu Anda buat di dashboard
+
+Kode template bisa diubah di pengaturan (Tahap 5). Nilai awalnya `ompreng_ambil` dan `ompreng_kembali`. Semua variabel di bawah selalu terisi, tidak pernah kosong (kosong diganti `-`), jadi aman didaftarkan sebagai wajib.
+
+**`ompreng_ambil`** (prioritas Medium), variabel wajib:
+`nama_wali,kelas,ketua,pengambil,jumlah_ambil,tanggal,jam,instansi`
+
+Contoh varian: `Assalamualaikum {{nama_wali}}, kelas {{kelas}} telah mengambil {{jumlah_ambil}} ompreng pada {{tanggal}} pukul {{jam}}. Diambil oleh {{pengambil}}. Terima kasih.`
+
+**`ompreng_kembali`** (prioritas Medium), variabel wajib:
+`nama_wali,kelas,ketua,jenis,pengembali,jumlah_ambil,jumlah_kembali,total_kembali,sisa,status,tanggal,jam,instansi`
+
+Contoh varian: `{{jenis}} kelas {{kelas}} pada {{tanggal}} pukul {{jam}}: {{jumlah_kembali}} ompreng dikembalikan oleh {{pengembali}}. Total kembali {{total_kembali}} dari {{jumlah_ambil}} ompreng. Status: {{status}}.`
+
+Arti variabel yang kurang jelas:
+- `jumlah_kembali` adalah jumlah pada pengembalian kali ini. `total_kembali` adalah akumulasi hari itu.
+- `status` berisi `Lengkap` atau `Kurang N Ompreng`.
+- `jenis` berisi `Pengembalian` atau `Pengembalian susulan`.
+
+Validator layanan menolak huruf kapital berlebihan dan lebih dari satu `!`. Buat minimal 2 varian dengan gaya kalimat berbeda.
+
+## 9. Verifikasi
+
+```bash
+gofmt -l internal && go build ./... && go vet ./... && go test ./...
+```
+
+Catatan:
+- `GetWAConfig` dan `SimpanWAConfig` otomatis ikut binding Wails saat `wails dev`.
+- Secret tersimpan di SQLite lokal sebagai teks biasa. Itu wajar untuk aplikasi desktop, tetapi jangan menaruh folder datanya di tempat yang dibagikan. Secret tidak ikut ekspor sinkronisasi dan tidak masuk audit log.
+- Koreksi lewat menu Riwayat (edit transaksi) tidak mengirim pesan, karena yang dikirim hanya kejadian submit dari operator.
+
+Kirim hasil perintah di nomor 9 dan `main.go`. Setelah itu kita masuk ke **Tahap 5**: form pengaturan WhatsApp, tombol uji kirim, dan tabel riwayat notifikasi beserta status pengirimannya.
+
+sirkulasi-ompreng on main ≡  ?3 ~6
+➜ gofmt -l internal && go build ./... && go vet ./... && go test ./...
+?       mbg     [no test files]
+?       mbg/internal/db [no test files]
+?       mbg/internal/export     [no test files]
+?       mbg/internal/model      [no test files]
+ok      mbg/internal/pembaruan  (cached)
+ok      mbg/internal/reader     (cached)
+ok      mbg/internal/service    (cached)
+?       mbg/internal/sinkron    [no test files]
+?       mbg/internal/timeutil   [no test files]
+?       mbg/internal/versi      [no test files]
+ok      mbg/internal/whatsapp   (cached)
+sirkulasi-ompreng on main ≡  ?3 ~6
+➜ cat main.go
+package main
+
+import (
+        "context"
+        "embed"
+        "log"
+        "os"
+        "path/filepath"
+
+        "github.com/wailsapp/wails/v2/pkg/options/linux"
+
+        "github.com/wailsapp/wails/v2"
+        "github.com/wailsapp/wails/v2/pkg/options"
+        "github.com/wailsapp/wails/v2/pkg/options/assetserver"
+
+        "mbg/internal/db"
+        "mbg/internal/reader"
+        "mbg/internal/service"
+
+        wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
+//go:embed all:frontend
+var assets embed.FS
+
+//go:embed build/appicon.png
+var icon []byte
+
+func main() {
+        dir := db.DataDir()
+        if err := os.MkdirAll(dir, 0o755); err != nil {
+                log.Fatalf("gagal membuat folder data %s: %v", dir, err)
+        }
+
+        conn, err := db.Open(filepath.Join(dir, "mbg.db"))
+        if err != nil {
+                log.Fatalf("gagal membuka database: %v", err)
+        }
+        defer conn.Close()
+
+        svc := service.New(conn, dir)
+
+        var appCtx context.Context
+        mgr := reader.NewManager(
+                func() string { p, _ := svc.GetPengaturan(); return p.PortSerial },
+                func(uid string) { wruntime.EventsEmit(appCtx, "card:tap", uid) },
+                func(st reader.Status) {
+                        svc.SetStatusReader(st)
+                        if appCtx != nil {
+                                wruntime.EventsEmit(appCtx, "reader:status", st)
+                        }
+                },
+        )
+
+        err = wails.Run(&options.App{
+                Title:       "SI'OM - Sirkulasi Ompreng MBG",
+                Width:       1200,
+                Height:      800,
+                AssetServer: &assetserver.Options{Assets: assets},
+                Linux:       &linux.Options{Icon: icon, ProgramName: "mbg"},
+                OnStartup: func(ctx context.Context) {
+                        appCtx = ctx
+                        svc.SetContext(ctx)
+                        go mgr.Run(ctx)
+                        svc.MulaiAntreanWA()
+                },
+                OnShutdown: func(ctx context.Context) {
+                        svc.BerhentiAntreanWA()
+                },
+                Bind: []interface{}{svc},
+        })
+        if err != nil {
+                log.Fatalf("wails: %v", err)
+        }
+}
+sirkulasi-ompreng on main ≡  ?3 ~6
+➜ 

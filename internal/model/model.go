@@ -221,3 +221,38 @@ type HasilPasang struct {
 	Pesan    string `json:"pesan"`
 	Keluar   bool   `json:"keluar"` // Windows: aplikasi akan ditutup
 }
+
+type WAConfig struct {
+	Aktif           bool   `json:"aktif"`
+	BaseURL         string `json:"base_url"`
+	KeyID           string `json:"key_id"`
+	Secret          string `json:"secret"`     // hanya masuk; tidak pernah dikirim balik ke UI
+	SecretAda       bool   `json:"secret_ada"` // true bila secret sudah tersimpan
+	TemplateAmbil   string `json:"template_ambil"`
+	TemplateKembali string `json:"template_kembali"`
+}
+
+type WAAntrean struct {
+	ID            int64  `json:"id"`
+	Jenis         string `json:"jenis"`
+	NamaWali      string `json:"nama_wali"`
+	NoWA          string `json:"no_wa"`
+	Status        string `json:"status"` // ANTRE | TERKIRIM | GAGAL
+	StatusLayanan string `json:"status_layanan"`
+	Percobaan     int    `json:"percobaan"`
+	Galat         string `json:"galat"`
+	Dibuat        string `json:"dibuat"`
+	CobaLagi      string `json:"coba_lagi"`
+	Terkirim      string `json:"terkirim"`
+}
+
+type WARingkasan struct {
+	Antre    int `json:"antre"`
+	Terkirim int `json:"terkirim"`
+	Gagal    int `json:"gagal"`
+}
+
+type WAUji struct {
+	JobID  string `json:"job_id"`
+	Status string `json:"status"`
+}

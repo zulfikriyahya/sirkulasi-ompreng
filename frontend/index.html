@@ -131,6 +131,7 @@
                         <button data-sub="instansi" class="aktif">Pengaturan</button>
                         <button data-sub="kelas">Kelas</button>
                         <button data-sub="wali">Wali Kelas</button>
+                        <button data-sub="wa">WhatsApp</button>
                         <button data-sub="kartu">Kartu RFID</button>
                     </div>
 
@@ -393,6 +394,12 @@
                         </div>
                     </div>
 
+                    <div id="sub-wa" class="sub">
+                        <div class="panel">
+                            <div class="panel-badan" id="wa-panel"></div>
+                        </div>
+                    </div>
+
                     <div id="sub-kartu" class="sub">
                         <div class="panel">
                             <div class="panel-kepala">
@@ -502,6 +509,7 @@
                                         <option>aplikasi</option>
                                         <option>hari</option>
                                         <option>wali_kelas</option>
+                                        <option>wa_config</option>
                                     </select></label>
                                 <button id="ra-cari" class="utama">Tampilkan</button>
                             </div>
@@ -589,6 +597,7 @@
     <script src="js/ekspor.js"></script>
     <script src="js/sinkron.js"></script>
     <script src="js/pembaruan.js"></script>
+    <script src="js/wa.js"></script>
     <script src="js/main.js"></script>
     <script>
         document.getElementById("link-footer").addEventListener("click", function (e) {

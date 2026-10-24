@@ -169,6 +169,12 @@ func (s *Service) SubmitAmbil(kelasID int64, jumlah int) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	s.antreanWA(s.db, "AMBIL", "mbg-ambil-"+itoa(id), kelasID, map[string]string{
+		"pengambil":    nonKosong(s.siswaNama),
+		"jumlah_ambil": strconv.Itoa(jumlah),
+		"tanggal":      timeutil.HariTanggalIndo(now),
+		"jam":          timeutil.Jam(now),
+	})
 	s.lastSubmit[kelasID] = now
 	s.pending = nil
 	s.siswaNISN, s.siswaNama = "", ""
@@ -247,10 +253,12 @@ func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
 		statusBaru = "SELESAI"
 	}
 	jam := timeutil.Jam(now)
-	if _, err := tx.Exec(`INSERT INTO pengembalian (transaksi_id,waktu,jumlah,nisn,nama_siswa) VALUES (?,?,?,?,?)`,
-		id, jam, jumlah, s.siswaNISN, s.siswaNama); err != nil {
+	resP, err := tx.Exec(`INSERT INTO pengembalian (transaksi_id,waktu,jumlah,nisn,nama_siswa) VALUES (?,?,?,?,?)`,
+		id, jam, jumlah, s.siswaNISN, s.siswaNama)
+	if err != nil {
 		return err
 	}
+	pid, _ := resP.LastInsertId()
 	namaGabung, err := namaPengembali(tx, id)
 	if err != nil {
 		return err
@@ -274,6 +282,22 @@ func (s *Service) SubmitKembali(kelasID int64, jumlah int) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	sisa := jAmbil - total
+	jenisKembali := "Pengembalian"
+	if susulan {
+		jenisKembali = "Pengembalian susulan"
+	}
+	s.antreanWA(s.db, "KEMBALI", "mbg-kembali-"+itoa(pid), kelasID, map[string]string{
+		"jenis":          jenisKembali,
+		"pengembali":     nonKosong(s.siswaNama),
+		"jumlah_ambil":   strconv.Itoa(jAmbil),
+		"jumlah_kembali": strconv.Itoa(jumlah),
+		"total_kembali":  strconv.Itoa(total),
+		"sisa":           strconv.Itoa(sisa),
+		"status":         teksStatusKembali(sisa),
+		"tanggal":        timeutil.HariTanggalIndo(now),
+		"jam":            jam,
+	})
 	if statusBaru == "KURANG" {
 		// dimundurkan agar efektif hanya cooldownSusulan (lihat komentar konstanta)
 		s.lastSubmit[kelasID] = now.Add(-(cooldownKelas - cooldownSusulan))
