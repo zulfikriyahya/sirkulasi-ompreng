@@ -4,439 +4,588 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MBG - Makanan Bergizi Gratis</title>
+    <title>SI'OM - Sirkulasi Ompreng MBG</title>
+    <link rel="icon" href="images/icon.ico">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
-    <header>
-        <div class="merek">
-            <div class="merek-logo" aria-hidden="true">M</div>
-            <h1>MBG <span>Makanan Bergizi Gratis</span></h1>
-        </div>
-        <nav>
-            <button data-tab="beranda" class="aktif">
-                <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M3 10.5 12 3l9 7.5" />
-                    <path d="M5 9.5V21h14V9.5" />
-                    <path d="M10 21v-6h4v6" />
-                </svg>Beranda</button>
-            <button data-tab="master">
-                <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <ellipse cx="12" cy="5" rx="8" ry="3" />
-                    <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
-                    <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
-                </svg>Master Data</button>
-            <button data-tab="riwayat">
-                <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7v5l3 2" />
-                </svg>Riwayat</button>
-            <button data-tab="ekspor">
-                <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 3v12" />
-                    <path d="m7 10 5 5 5-5" />
-                    <path d="M4 20h16" />
-                </svg>Ekspor</button>
-        </nav>
-        <span class="spasi"></span>
-        <span id="status-reader" class="pil-status"><i class="titik"></i><span class="teks">Reader serial:
-                mencari...</span></span>
-        <button id="badge-pembaruan" class="badge hidden"></button>
-        <span id="info-tanggal"></span>
-    </header>
+    <div class="aplikasi">
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-kepala">
+                <img class="merek-logo" src="images/icon.ico" alt="MBG">
+                <h1 class="merek-teks">SI'OM <span>Sirkulasi Ompreng MBG</span></h1>
+            </div>
 
-    <main>
-        <!-- BERANDA -->
-        <section id="tab-beranda" class="tab aktif">
-            <div class="kepala-halaman">
-                <h2>Beranda</h2>
-                <p>Status pengambilan dan pengembalian ompreng hari ini.</p>
+            <nav>
+                <button data-tab="beranda" class="aktif" title="Beranda">
+                    <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 10.5 12 3l9 7.5" />
+                        <path d="M5 9.5V21h14V9.5" />
+                        <path d="M10 21v-6h4v6" />
+                    </svg><span class="label">Beranda</span></button>
+                <button data-tab="master" title="Master Data">
+                    <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <ellipse cx="12" cy="5" rx="8" ry="3" />
+                        <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+                        <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+                    </svg><span class="label">Master Data</span></button>
+                <button data-tab="riwayat" title="Riwayat">
+                    <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                    </svg><span class="label">Riwayat</span></button>
+                <button data-tab="ekspor" title="Ekspor">
+                    <svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 3v12" />
+                        <path d="m7 10 5 5 5-5" />
+                        <path d="M4 20h16" />
+                    </svg><span class="label">Ekspor</span></button>
+            </nav>
+
+            <div class="sidebar-kaki">
+                <button id="btn-collapse" aria-label="Ciutkan sidebar" aria-expanded="true" title="Ciutkan sidebar">
+                    <svg class="ikon panah" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m15 6-6 6 6 6" />
+                    </svg><span class="label">Ciutkan</span></button>
             </div>
-            <div class="petunjuk"><i class="denyut"></i>Tempelkan kartu RFID pada reader untuk mencatat pengambilan atau
-                pengembalian.</div>
-            <div class="statistik" id="statistik"></div>
-            <div class="panel potong">
-                <div class="panel-kepala">
-                    <h3>Daftar kelas</h3>
-                    <span id="ringkasan"></span>
-                </div>
-                <div class="progres"><i id="progres-isi"></i></div>
-                <div class="tabel-gulir">
-                    <table id="tabel-hari">
-                        <thead>
-                            <tr>
-                                <th class="num">No</th>
-                                <th>Kelas</th>
-                                <th>Ketua</th>
-                                <th>Status</th>
-                                <th class="num">Ambil</th>
-                                <th class="num">Kembali</th>
-                                <th>Waktu Ambil</th>
-                                <th>Waktu Kembali</th>
-                                <th>Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="panel-kaki bar-beranda">
-                    <div class="grup">
-                        <button id="btn-uid-manual">Input UID manual</button>
+        </aside>
+
+        <div class="konten">
+            <header class="topbar">
+                <span class="spasi"></span>
+                <span id="status-reader" class="pil-status"><i class="titik"></i><span class="teks">Reader serial:
+                        mencari...</span></span>
+                <button id="badge-pembaruan" class="badge hidden"></button>
+                <span id="info-tanggal"></span>
+            </header>
+
+            <main>
+                <!-- BERANDA -->
+                <section id="tab-beranda" class="tab aktif">
+                    <div class="kepala-halaman">
+                        <h2>Beranda</h2>
+                        <p>Status pengambilan dan pengembalian ompreng hari ini.</p>
                     </div>
-                    <div class="grup">
-                        <button id="btn-tutup">Tutup hari</button>
-                        <button id="btn-buka" class="hidden">Buka kembali hari ini</button>
-                        <button id="btn-cetak" class="utama" disabled
-                            title="Aktif jika semua kelas selesai atau hari ditutup">Cetak PDF</button>
+                    <div class="petunjuk"><i class="denyut"></i>Tempelkan kartu RFID pada reader untuk mencatat
+                        pengambilan atau
+                        pengembalian.</div>
+                    <div class="statistik" id="statistik"></div>
+
+                    <div class="panel potong">
+                        <div class="panel-kepala">
+                            <h3>Daftar kelas</h3>
+                            <span id="ringkasan"></span>
+                        </div>
+                        <div class="progres"><i id="progres-isi"></i></div>
+                        <div class="tabel-gulir">
+                            <table id="tabel-hari">
+                                <thead>
+                                    <tr>
+                                        <th class="num">No</th>
+                                        <th>Kelas</th>
+                                        <th>Ketua</th>
+                                        <th>Status</th>
+                                        <th class="num">Ambil</th>
+                                        <th class="num">Kembali</th>
+                                        <th>Waktu Ambil</th>
+                                        <th>Waktu Kembali</th>
+                                        <th>Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="panel-kaki bar-beranda">
+                            <div class="grup">
+                                <button id="btn-uid-manual">Input UID manual</button>
+                            </div>
+                            <div class="grup">
+                                <button id="btn-tutup">Tutup hari</button>
+                                <button id="btn-buka" class="hidden">Buka kembali hari ini</button>
+                                <button id="btn-cetak" class="utama" disabled
+                                    title="Aktif jika semua kelas selesai atau hari ditutup">Cetak PDF</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <!-- <details class="sim">
+                    <!-- <details class="sim">
                 <summary>Simulator tap (pengembangan)</summary>
                 <input id="sim-uid" placeholder="UID, mis. 0012345678" maxlength="12">
                 <button id="sim-kirim">Kirim tap</button>
                 <button id="sim-hid">Simulasikan HID (ketik cepat)</button>
             </details> -->
-        </section>
+                </section>
 
-        <!-- MASTER -->
-        <section id="tab-master" class="tab">
-            <div class="kepala-halaman">
-                <h2>Master Data</h2>
-                <p>Kelola instansi, kelas, kartu RFID, dan sinkronisasi data antar komputer.</p>
-            </div>
-            <div class="subnav">
-                <button data-sub="instansi" class="aktif">Instansi</button>
-                <button data-sub="kelas">Kelas &amp; Ketua</button>
-                <button data-sub="kartu">Kartu RFID</button>
-                <button data-sub="sinkron">Sinkronisasi</button>
-            </div>
+                <!-- MASTER -->
+                <section id="tab-master" class="tab">
+                    <div class="kepala-halaman">
+                        <h2>Master Data</h2>
+                        <p>Kelola instansi, kelas, kartu RFID, dan sinkronisasi data antar komputer.</p>
+                    </div>
+                    <div class="subnav">
+                        <button data-sub="instansi" class="aktif">Pengaturan</button>
+                        <button data-sub="kelas">Kelas</button>
+                        <button data-sub="kartu">Kartu RFID</button>
+                    </div>
 
-            <div id="sub-instansi" class="sub aktif">
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Identitas instansi</h3>
-                    </div>
-                    <div class="panel-badan form-grid">
-                        <label class="field penuh"><span>Nama instansi</span><input id="p-nama"></label>
-                        <label class="field penuh"><span>Alamat</span><input id="p-alamat"></label>
-                        <label class="field"><span>Penanggung jawab</span><input id="p-pj"></label>
-                        <label class="field"><span>NIP</span><input id="p-nip"></label>
-                        <label class="field penuh"><span>Jabatan</span><input id="p-jabatan"></label>
-                    </div>
-                </div>
+                    <div id="sub-instansi" class="sub aktif">
+                        <!-- ===== Pengaturan instansi ===== -->
+                        <div class="grid-panel">
+                            <div class="panel lebar-penuh">
+                                <div class="panel-kepala">
+                                    <h3>Identitas instansi</h3>
+                                </div>
+                                <div class="panel-badan form-grid">
+                                    <label class="field penuh"><span>Nama instansi</span><input id="p-nama"></label>
+                                    <label class="field penuh"><span>Alamat</span><input id="p-alamat"></label>
+                                    <label class="field"><span>Penanggung jawab</span><input id="p-pj"></label>
+                                    <label class="field"><span>NIP</span><input id="p-nip"></label>
+                                    <label class="field penuh"><span>Jabatan</span><input id="p-jabatan"></label>
+                                </div>
+                            </div>
 
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Logo laporan</h3>
-                    </div>
-                    <div class="panel-badan baris-aksi">
-                        <span class="kecil" id="logo-status"></span>
-                        <button id="logo-pilih">Pilih logo (PNG/JPEG)</button>
-                        <button id="logo-hapus" class="bahaya">Hapus logo</button>
-                    </div>
-                </div>
+                            <div class="panel">
+                                <div class="panel-kepala">
+                                    <h3>Logo laporan</h3>
+                                </div>
+                                <div class="panel-badan baris-aksi">
+                                    <span class="kecil" id="logo-status"></span>
+                                    <button id="logo-pilih">Pilih logo (PNG/JPEG)</button>
+                                    <button id="logo-hapus" class="bahaya">Hapus logo</button>
+                                </div>
+                            </div>
 
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Pembacaan kartu</h3>
-                    </div>
-                    <div class="panel-badan form-grid">
-                        <label class="field"><span>Jeda minimum ambil &rarr; kembali (menit)</span><input id="p-jeda"
-                                type="number" min="0">
-                            <span class="kecil">Tap kembali sebelum jeda ini akan meminta konfirmasi.</span></label>
-                        <label class="field"><span>Ambang kecepatan HID (ms)</span><input id="p-hid" type="number"
-                                min="10">
-                            <span class="kecil">Ketikan yang lebih cepat dari ambang ini dianggap tap reader
-                                HID.</span></label>
-                    </div>
-                </div>
+                            <div class="panel">
+                                <div class="panel-kepala">
+                                    <h3>Pembaruan aplikasi</h3>
+                                </div>
+                                <div class="panel-badan">
+                                    <div class="baris-aksi">
+                                        <button id="pb-periksa">Periksa pembaruan</button>
+                                        <label class="cek"><input type="checkbox" id="pb-otomatis"> Periksa pembaruan
+                                            otomatis</label>
+                                        <label class="cek"><input type="checkbox" id="pb-pra"> Sertakan
+                                            pra-rilis</label>
+                                    </div>
+                                    <p class="kecil" style="margin:10px 0 0">Pilihan pembaruan tersimpan otomatis saat
+                                        diubah.</p>
+                                </div>
+                            </div>
 
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Pembaruan aplikasi</h3>
-                    </div>
-                    <div class="panel-badan">
-                        <div class="baris-aksi">
-                            <button id="pb-periksa">Periksa pembaruan</button>
-                            <label class="cek"><input type="checkbox" id="pb-otomatis"> Periksa pembaruan
-                                otomatis</label>
-                            <label class="cek"><input type="checkbox" id="pb-pra"> Sertakan pra-rilis</label>
+                            <div class="panel lebar-penuh">
+                                <div class="panel-kepala">
+                                    <h3>Pembacaan kartu</h3>
+                                </div>
+                                <div class="panel-badan form-grid">
+                                    <label class="field"><span>Jeda minimum ambil &rarr; kembali (menit)</span><input
+                                            id="p-jeda" type="number" min="0">
+                                        <span class="kecil">Tap kembali sebelum jeda ini akan meminta
+                                            konfirmasi.</span></label>
+                                    <label class="field"><span>Ambang kecepatan HID (ms)</span><input id="p-hid"
+                                            type="number" min="10">
+                                        <span class="kecil">Ketikan yang lebih cepat dari ambang ini dianggap tap reader
+                                            HID.</span></label>
+                                </div>
+                            </div>
                         </div>
-                        <p class="kecil" style="margin:10px 0 0">Pilihan pembaruan tersimpan otomatis saat diubah.</p>
-                    </div>
-                </div>
 
-                <div class="bar-simpan">
-                    <p class="kecil" id="info-sistem" style="margin:0"></p>
-                    <button id="p-simpan" class="utama">Simpan</button>
-                </div>
-            </div>
-
-            <div id="sub-kelas" class="sub">
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Tambah atau ubah kelas</h3>
-                    </div>
-                    <div class="panel-badan toolbar">
-                        <label class="field grow"><span>Nama kelas</span><input id="k-nama"
-                                placeholder="mis. VII A"></label>
-                        <label class="field grow"><span>Nama ketua murid</span><input id="k-ketua"
-                                placeholder="Nama ketua murid"></label>
-                        <label class="field sempit"><span>Urutan</span><input id="k-urutan" type="number"
-                                placeholder="Urutan" value="0"></label>
-                        <button id="k-simpan" class="utama">Tambah</button>
-                        <button id="k-batal" class="hidden">Batal ubah</button>
-                    </div>
-                </div>
-                <div class="panel potong">
-                    <div class="panel-kepala">
-                        <h3>Daftar kelas</h3>
-                        <label class="cek"><input type="checkbox" id="k-semua"> Tampilkan kelas nonaktif</label>
-                    </div>
-                    <div class="tabel-gulir">
-                        <table id="tabel-kelas">
-                            <thead>
-                                <tr>
-                                    <th class="num">Urutan</th>
-                                    <th>Kelas</th>
-                                    <th>Ketua</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div id="sub-sinkron" class="sub">
-                <div class="peringatan"><b>Data pribadi.</b> Berkas ekspor kartu berisi NISN dan nama siswa. Simpan di
-                    lokasi aman, jangan di folder repositori atau rilis publik, dan hapus setelah dipakai.</div>
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Ekspor data master</h3>
-                    </div>
-                    <div class="panel-badan">
-                        <p class="deskripsi">Simpan pengaturan instansi, kelas, dan kartu untuk dipindah ke komputer
-                            lain.</p>
-                        <div class="baris-aksi">
-                            <button id="sk-xlsx" class="utama">Ekspor Master (Excel)</button>
-                            <button id="sk-csv-kelas">Ekspor Kelas (CSV)</button>
-                            <button id="sk-csv-kartu">Ekspor Kartu (CSV)</button>
+                        <div class="bar-simpan">
+                            <p class="kecil" id="info-sistem" style="margin:0"></p>
+                            <button id="p-simpan" class="utama">Simpan</button>
                         </div>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Template impor kosong</h3>
-                    </div>
-                    <div class="panel-badan">
-                        <p class="deskripsi">Unduh berkas kosong dengan kolom yang benar, isi, lalu impor.</p>
-                        <div class="baris-aksi">
-                            <button id="sk-tpl-xlsx">Template Excel</button>
-                            <button id="sk-tpl-kelas">Template CSV Kelas</button>
-                            <button id="sk-tpl-kartu">Template CSV Kartu</button>
+
+                        <!-- ===== Sinkronisasi data ===== -->
+                        <h3 class="judul-bagian">Sinkronisasi data</h3>
+                        <div class="peringatan"><b>Data pribadi.</b> Berkas ekspor kartu berisi NISN dan nama siswa.
+                            Simpan di lokasi aman, jangan di folder repositori atau rilis publik, dan hapus setelah
+                            dipakai.
+                        </div>
+
+                        <div class="grid-panel">
+                            <div class="panel">
+                                <div class="panel-kepala">
+                                    <h3>Ekspor data master</h3>
+                                </div>
+                                <div class="panel-badan">
+                                    <p class="deskripsi">Simpan pengaturan instansi, kelas, dan kartu untuk dipindah ke
+                                        komputer lain.</p>
+                                    <div class="baris-aksi">
+                                        <button id="sk-xlsx" class="utama">Ekspor Master (Excel)</button>
+                                        <button id="sk-csv-kelas">Ekspor Kelas (CSV)</button>
+                                        <button id="sk-csv-kartu">Ekspor Kartu (CSV)</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-kepala">
+                                    <h3>Template impor kosong</h3>
+                                </div>
+                                <div class="panel-badan">
+                                    <p class="deskripsi">Unduh berkas kosong dengan kolom yang benar, isi, lalu impor.
+                                    </p>
+                                    <div class="baris-aksi">
+                                        <button id="sk-tpl-xlsx">Template Excel</button>
+                                        <button id="sk-tpl-kelas">Template CSV Kelas</button>
+                                        <button id="sk-tpl-kartu">Template CSV Kartu</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="panel lebar-penuh">
+                                <div class="panel-kepala">
+                                    <h3>Impor data master</h3>
+                                </div>
+                                <div class="panel-badan">
+                                    <div class="baris-aksi"><button id="sk-impor" class="utama">Impor Master...</button>
+                                    </div>
+                                    <p class="kecil" style="margin:12px 0 0">Impor selalu menampilkan pratinjau dulu dan
+                                        tidak menulis apa pun sebelum Anda menekan Terapkan. CSV yang dibuka lalu
+                                        disimpan ulang di Excel bisa kehilangan nol di depan; UID tetap dinormalkan saat
+                                        impor, tetapi NISN pendek akan diberi peringatan. Logo, port serial, dan ambang
+                                        HID tidak ikut disinkronkan.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Impor data master</h3>
-                    </div>
-                    <div class="panel-badan">
-                        <div class="baris-aksi"><button id="sk-impor" class="utama">Impor Master...</button></div>
-                        <p class="kecil" style="margin:12px 0 0">Impor selalu menampilkan pratinjau dulu dan tidak
-                            menulis apa pun sebelum Anda menekan Terapkan. CSV yang dibuka lalu disimpan ulang di Excel
-                            bisa kehilangan nol di depan; UID tetap dinormalkan saat impor, tetapi NISN pendek akan
-                            diberi peringatan. Logo, port serial, dan ambang HID tidak ikut disinkronkan.</p>
-                    </div>
-                </div>
-            </div>
 
-            <div id="sub-kartu" class="sub">
-                <div class="panel">
-                    <div class="panel-kepala">
-                        <h3>Daftarkan kartu</h3>
-                    </div>
-                    <div class="panel-badan">
-                        <div class="toolbar">
-                            <label class="field"><span>Kelas</span><select id="c-kelas"></select></label>
-                            <label class="field grow"><span>UID kartu</span><input id="c-uid"
-                                    placeholder="Tap kartu atau ketik UID" maxlength="12"></label>
-                            <label class="field"><span>NISN</span><input id="c-nisn" placeholder="Opsional"
-                                    maxlength="10"></label>
-                            <label class="field grow"><span>Nama siswa</span><input id="c-nama"
-                                    placeholder="Opsional"></label>
-                            <button id="c-daftar" class="utama">Daftarkan</button>
+                    <!-- <div id="sub-instansi" class="sub aktif">
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Identitas instansi</h3>
+                            </div>
+                            <div class="panel-badan form-grid">
+                                <label class="field penuh"><span>Nama instansi</span><input id="p-nama"></label>
+                                <label class="field penuh"><span>Alamat</span><input id="p-alamat"></label>
+                                <label class="field"><span>Penanggung jawab</span><input id="p-pj"></label>
+                                <label class="field"><span>NIP</span><input id="p-nip"></label>
+                                <label class="field penuh"><span>Jabatan</span><input id="p-jabatan"></label>
+                            </div>
                         </div>
-                        <p class="kecil" style="margin:12px 0 0">Di tab ini, tap kartu akan mengisi kolom UID (tidak
-                            memproses ambil/kembali).</p>
-                    </div>
-                </div>
-                <div class="panel potong">
-                    <div class="panel-kepala">
-                        <h3>Kartu pada kelas terpilih</h3>
-                    </div>
-                    <div class="tabel-gulir">
-                        <table id="tabel-kartu">
-                            <thead>
-                                <tr>
-                                    <th>UID</th>
-                                    <th>NISN</th>
-                                    <th>Nama Siswa</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- RIWAYAT -->
-        <section id="tab-riwayat" class="tab">
-            <div class="kepala-halaman">
-                <h2>Riwayat</h2>
-                <p>Telusuri transaksi dan jejak perubahan data.</p>
-            </div>
-            <div class="segmen">
-                <button id="r-btn-trx" class="aktif">Transaksi</button>
-                <button id="r-btn-audit">Audit Log</button>
-            </div>
-            <div id="r-trx">
-                <div class="panel">
-                    <div class="panel-badan toolbar">
-                        <label class="field"><span>Dari</span><input id="rf-dari" type="date"></label>
-                        <label class="field"><span>Sampai</span><input id="rf-sampai" type="date"></label>
-                        <label class="field"><span>Kelas</span><select id="rf-kelas"></select></label>
-                        <label class="field"><span>Status</span>
-                            <select id="rf-status">
-                                <option value="">Semua status</option>
-                                <option value="AMBIL">Sudah ambil</option>
-                                <option value="KURANG">Kurang</option>
-                                <option value="SELESAI">Selesai</option>
-                                <option value="BELUM_KEMBALI">Belum kembali</option>
-                                <option value="TIDAK_AMBIL">Tidak mengambil</option>
-                            </select></label>
-                        <button id="rf-cari" class="utama">Tampilkan</button>
-                    </div>
-                </div>
-                <div class="panel potong">
-                    <div class="tabel-gulir">
-                        <table id="tabel-riwayat">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Kelas</th>
-                                    <th>Ketua</th>
-                                    <th>Pengambil</th>
-                                    <th>Pengembali</th>
-                                    <th>Status</th>
-                                    <th class="num">Ambil</th>
-                                    <th class="num">Kembali</th>
-                                    <th>Waktu</th>
-                                    <th>Keterangan</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div id="r-audit" class="hidden">
-                <div class="panel">
-                    <div class="panel-badan toolbar">
-                        <label class="field"><span>Dari</span><input id="ra-dari" type="date"></label>
-                        <label class="field"><span>Sampai</span><input id="ra-sampai" type="date"></label>
-                        <label class="field"><span>Entitas</span>
-                            <select id="ra-entitas">
-                                <option value="">Semua entitas</option>
-                                <option>transaksi</option>
-                                <option>kelas</option>
-                                <option>kartu</option>
-                                <option>pengaturan</option>
-                                <option>master</option>
-                                <option>aplikasi</option>
-                                <option>hari</option>
-                            </select></label>
-                        <button id="ra-cari" class="utama">Tampilkan</button>
-                    </div>
-                </div>
-                <div class="panel potong">
-                    <div class="tabel-gulir">
-                        <table id="tabel-audit">
-                            <thead>
-                                <tr>
-                                    <th>Waktu</th>
-                                    <th>Aksi</th>
-                                    <th>Entitas</th>
-                                    <th>ID</th>
-                                    <th>Nilai lama</th>
-                                    <th>Nilai baru</th>
-                                    <th>Alasan</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Logo laporan</h3>
+                            </div>
+                            <div class="panel-badan baris-aksi">
+                                <span class="kecil" id="logo-status"></span>
+                                <button id="logo-pilih">Pilih logo (PNG/JPEG)</button>
+                                <button id="logo-hapus" class="bahaya">Hapus logo</button>
+                            </div>
+                        </div>
 
-        <!-- EKSPOR -->
-        <section id="tab-ekspor" class="tab">
-            <div class="kepala-halaman">
-                <h2>Ekspor Laporan</h2>
-                <p>Pilih rentang tanggal, lihat pratinjau, lalu ekspor ke Excel atau PDF.</p>
-            </div>
-            <div class="panel">
-                <div class="panel-badan toolbar">
-                    <label class="field"><span>Dari</span><input id="ek-dari" type="date"></label>
-                    <label class="field"><span>Sampai</span><input id="ek-sampai" type="date"></label>
-                    <button id="ek-lihat">Pratinjau</button>
-                    <span class="spasi"></span>
-                    <button id="ek-xlsx">Ekspor Excel</button>
-                    <button id="ek-pdf" class="utama">Ekspor PDF</button>
-                </div>
-            </div>
-            <p class="kecil" id="ek-info" style="margin:12px 2px"></p>
-            <div class="panel potong">
-                <div class="tabel-gulir">
-                    <table id="tabel-ekspor">
-                        <thead>
-                            <tr>
-                                <th class="num">No</th>
-                                <th>Kelas</th>
-                                <th>Ketua</th>
-                                <th>Pengambil</th>
-                                <th>Pengembali</th>
-                                <th>Tanggal</th>
-                                <th>Ambil (waktu)</th>
-                                <th>Kembali (waktu)</th>
-                                <th class="num">Jml Ambil</th>
-                                <th class="num">Jml Kembali</th>
-                                <th>Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Pembacaan kartu</h3>
+                            </div>
+                            <div class="panel-badan form-grid">
+                                <label class="field"><span>Jeda minimum ambil &rarr; kembali (menit)</span><input
+                                        id="p-jeda" type="number" min="0">
+                                    <span class="kecil">Tap kembali sebelum jeda ini akan meminta
+                                        konfirmasi.</span></label>
+                                <label class="field"><span>Ambang kecepatan HID (ms)</span><input id="p-hid"
+                                        type="number" min="10">
+                                    <span class="kecil">Ketikan yang lebih cepat dari ambang ini dianggap tap reader
+                                        HID.</span></label>
+                            </div>
+                        </div>
 
-    <footer>
-        built with <span class="hati">&#9829;</span> by
-        <a href="https://zulfikriyahya.my.id" id="link-footer">Yahya Zulfikri</a>
-    </footer>
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Pembaruan aplikasi</h3>
+                            </div>
+                            <div class="panel-badan">
+                                <div class="baris-aksi">
+                                    <button id="pb-periksa">Periksa pembaruan</button>
+                                    <label class="cek"><input type="checkbox" id="pb-otomatis"> Periksa pembaruan
+                                        otomatis</label>
+                                    <label class="cek"><input type="checkbox" id="pb-pra"> Sertakan pra-rilis</label>
+                                </div>
+                                <p class="kecil" style="margin:10px 0 0">Pilihan pembaruan tersimpan otomatis saat
+                                    diubah.</p>
+                            </div>
+                        </div>
+
+                        <div class="bar-simpan">
+                            <p class="kecil" id="info-sistem" style="margin:0"></p>
+                            <button id="p-simpan" class="utama">Simpan</button>
+                        </div>
+                    </div> -->
+
+                    <div id="sub-kelas" class="sub">
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Tambah atau ubah kelas</h3>
+                            </div>
+                            <div class="panel-badan toolbar">
+                                <label class="field grow"><span>Nama kelas</span><input id="k-nama"
+                                        placeholder="mis. VII A"></label>
+                                <label class="field grow"><span>Nama ketua murid</span><input id="k-ketua"
+                                        placeholder="Nama ketua murid"></label>
+                                <label class="field sempit"><span>Urutan</span><input id="k-urutan" type="number"
+                                        placeholder="Urutan" value="0"></label>
+                                <button id="k-simpan" class="utama">Tambah</button>
+                                <button id="k-batal" class="hidden">Batal ubah</button>
+                            </div>
+                        </div>
+                        <div class="panel potong">
+                            <div class="panel-kepala">
+                                <h3>Daftar kelas</h3>
+                                <label class="cek"><input type="checkbox" id="k-semua"> Tampilkan kelas nonaktif</label>
+                            </div>
+                            <div class="tabel-gulir">
+                                <table id="tabel-kelas">
+                                    <thead>
+                                        <tr>
+                                            <th class="num">Urutan</th>
+                                            <th>Kelas</th>
+                                            <th>Ketua</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- <div id="sub-sinkron" class="sub">
+                        <div class="peringatan"><b>Data pribadi.</b> Berkas ekspor kartu berisi NISN dan nama siswa.
+                            Simpan di
+                            lokasi aman, jangan di folder repositori atau rilis publik, dan hapus setelah dipakai.
+                        </div>
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Ekspor data master</h3>
+                            </div>
+                            <div class="panel-badan">
+                                <p class="deskripsi">Simpan pengaturan instansi, kelas, dan kartu untuk dipindah ke
+                                    komputer
+                                    lain.</p>
+                                <div class="baris-aksi">
+                                    <button id="sk-xlsx" class="utama">Ekspor Master (Excel)</button>
+                                    <button id="sk-csv-kelas">Ekspor Kelas (CSV)</button>
+                                    <button id="sk-csv-kartu">Ekspor Kartu (CSV)</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Template impor kosong</h3>
+                            </div>
+                            <div class="panel-badan">
+                                <p class="deskripsi">Unduh berkas kosong dengan kolom yang benar, isi, lalu impor.</p>
+                                <div class="baris-aksi">
+                                    <button id="sk-tpl-xlsx">Template Excel</button>
+                                    <button id="sk-tpl-kelas">Template CSV Kelas</button>
+                                    <button id="sk-tpl-kartu">Template CSV Kartu</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Impor data master</h3>
+                            </div>
+                            <div class="panel-badan">
+                                <div class="baris-aksi"><button id="sk-impor" class="utama">Impor Master...</button>
+                                </div>
+                                <p class="kecil" style="margin:12px 0 0">Impor selalu menampilkan pratinjau dulu dan
+                                    tidak
+                                    menulis apa pun sebelum Anda menekan Terapkan. CSV yang dibuka lalu disimpan ulang
+                                    di Excel
+                                    bisa kehilangan nol di depan; UID tetap dinormalkan saat impor, tetapi NISN pendek
+                                    akan
+                                    diberi peringatan. Logo, port serial, dan ambang HID tidak ikut disinkronkan.</p>
+                            </div>
+                        </div>
+                    </div> -->
+
+                    <div id="sub-kartu" class="sub">
+                        <div class="panel">
+                            <div class="panel-kepala">
+                                <h3>Daftarkan kartu</h3>
+                            </div>
+                            <div class="panel-badan">
+                                <div class="toolbar">
+                                    <label class="field"><span>Kelas</span><select id="c-kelas"></select></label>
+                                    <label class="field grow"><span>UID kartu</span><input id="c-uid"
+                                            placeholder="Tap kartu atau ketik UID" maxlength="12"></label>
+                                    <label class="field"><span>NISN</span><input id="c-nisn" placeholder="Opsional"
+                                            maxlength="10"></label>
+                                    <label class="field grow"><span>Nama siswa</span><input id="c-nama"
+                                            placeholder="Opsional"></label>
+                                    <button id="c-daftar" class="utama">Daftarkan</button>
+                                </div>
+                                <p class="kecil" style="margin:12px 0 0">Di tab ini, tap kartu akan mengisi kolom UID
+                                    (tidak
+                                    memproses ambil/kembali).</p>
+                            </div>
+                        </div>
+                        <div class="panel potong">
+                            <div class="panel-kepala">
+                                <h3>Kartu pada kelas terpilih</h3>
+                            </div>
+                            <div class="tabel-gulir">
+                                <table id="tabel-kartu">
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>NISN</th>
+                                            <th>Nama Siswa</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- RIWAYAT -->
+                <section id="tab-riwayat" class="tab">
+                    <div class="kepala-halaman">
+                        <h2>Riwayat</h2>
+                        <p>Telusuri transaksi dan jejak perubahan data.</p>
+                    </div>
+                    <div class="segmen">
+                        <button id="r-btn-trx" class="aktif">Transaksi</button>
+                        <button id="r-btn-audit">Audit Log</button>
+                    </div>
+                    <div id="r-trx">
+                        <div class="panel">
+                            <div class="panel-badan toolbar">
+                                <label class="field"><span>Dari</span><input id="rf-dari" type="date"></label>
+                                <label class="field"><span>Sampai</span><input id="rf-sampai" type="date"></label>
+                                <label class="field"><span>Kelas</span><select id="rf-kelas"></select></label>
+                                <label class="field"><span>Status</span>
+                                    <select id="rf-status">
+                                        <option value="">Semua status</option>
+                                        <option value="AMBIL">Sudah ambil</option>
+                                        <option value="KURANG">Kurang</option>
+                                        <option value="SELESAI">Selesai</option>
+                                        <option value="BELUM_KEMBALI">Belum kembali</option>
+                                        <option value="TIDAK_AMBIL">Tidak mengambil</option>
+                                    </select></label>
+                                <button id="rf-cari" class="utama">Tampilkan</button>
+                            </div>
+                        </div>
+                        <div class="panel potong">
+                            <div class="tabel-gulir">
+                                <table id="tabel-riwayat">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanggal</th>
+                                            <th>Kelas</th>
+                                            <th>Ketua</th>
+                                            <th>Pengambil</th>
+                                            <th>Pengembali</th>
+                                            <th>Status</th>
+                                            <th class="num">Ambil</th>
+                                            <th class="num">Kembali</th>
+                                            <th>Waktu</th>
+                                            <th>Keterangan</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="r-audit" class="hidden">
+                        <div class="panel">
+                            <div class="panel-badan toolbar">
+                                <label class="field"><span>Dari</span><input id="ra-dari" type="date"></label>
+                                <label class="field"><span>Sampai</span><input id="ra-sampai" type="date"></label>
+                                <label class="field"><span>Entitas</span>
+                                    <select id="ra-entitas">
+                                        <option value="">Semua entitas</option>
+                                        <option>transaksi</option>
+                                        <option>kelas</option>
+                                        <option>kartu</option>
+                                        <option>pengaturan</option>
+                                        <option>master</option>
+                                        <option>aplikasi</option>
+                                        <option>hari</option>
+                                    </select></label>
+                                <button id="ra-cari" class="utama">Tampilkan</button>
+                            </div>
+                        </div>
+                        <div class="panel potong">
+                            <div class="tabel-gulir">
+                                <table id="tabel-audit">
+                                    <thead>
+                                        <tr>
+                                            <th>Waktu</th>
+                                            <th>Aksi</th>
+                                            <th>Entitas</th>
+                                            <th>ID</th>
+                                            <th>Nilai lama</th>
+                                            <th>Nilai baru</th>
+                                            <th>Alasan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- EKSPOR -->
+                <section id="tab-ekspor" class="tab">
+                    <div class="kepala-halaman">
+                        <h2>Ekspor Laporan</h2>
+                        <p>Pilih rentang tanggal, lihat pratinjau, lalu ekspor ke Excel atau PDF.</p>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-badan toolbar">
+                            <label class="field"><span>Dari</span><input id="ek-dari" type="date"></label>
+                            <label class="field"><span>Sampai</span><input id="ek-sampai" type="date"></label>
+                            <button id="ek-lihat">Pratinjau</button>
+                            <span class="spasi"></span>
+                            <button id="ek-xlsx">Ekspor Excel</button>
+                            <button id="ek-pdf" class="utama">Ekspor PDF</button>
+                        </div>
+                    </div>
+                    <p class="kecil" id="ek-info" style="margin:12px 2px"></p>
+                    <div class="panel potong">
+                        <div class="tabel-gulir">
+                            <table id="tabel-ekspor">
+                                <thead>
+                                    <tr>
+                                        <th class="num">No</th>
+                                        <th>Kelas</th>
+                                        <th>Ketua</th>
+                                        <th>Pengambil</th>
+                                        <th>Pengembali</th>
+                                        <th>Tanggal</th>
+                                        <th>Ambil (waktu)</th>
+                                        <th>Kembali (waktu)</th>
+                                        <th class="num">Jml Ambil</th>
+                                        <th class="num">Jml Kembali</th>
+                                        <th>Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                built with <span class="hati">&#9829;</span> by
+                <a href="https://zulfikriyahya.my.id" id="link-footer">    Yahya Zulfikri</a>
+            </footer>
+        </div><!-- /.konten -->
+    </div><!-- /.aplikasi -->
 
     <div id="toast" class="hidden" role="status" aria-live="polite"></div>
     <div id="modal" class="hidden">

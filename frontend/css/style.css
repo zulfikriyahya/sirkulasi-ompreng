@@ -1,5 +1,5 @@
 /* =====================================================================
-   MBG - Makanan Bergizi Gratis
+   SI'OM - Sirkulasi Ompreng MBG
    Sistem desain: token -> dasar -> kerangka -> komponen -> modal -> responsif
    ===================================================================== */
 
@@ -48,9 +48,8 @@ body {
 
 body {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
     font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
     line-height: 1.5;
@@ -80,8 +79,189 @@ h3 {
     flex: none
 }
 
+/* ---------- Kerangka: sidebar + konten ---------- */
+.aplikasi {
+    display: flex;
+    height: 100vh;
+    border-top: 3px solid var(--hijau);
+}
+
+.sidebar {
+    --lebar: 248px;
+    --lebar-ciut: 68px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    width: var(--lebar);
+    background: var(--putih);
+    border-right: 1px solid var(--garis);
+    /* border-top: 3px solid var(--hijau); */
+    transition: width .2s ease;
+    overflow: hidden;
+}
+
+.sidebar-kepala {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 64px;
+    padding: 0 17px;
+    border-bottom: 1px solid var(--garis);
+}
+
+.merek-logo {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    object-fit: contain;
+}
+
+.merek-teks {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--hijau-tua);
+    white-space: nowrap;
+}
+
+.merek-teks span {
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--redup)
+}
+
+.sidebar nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.sidebar nav button,
+.sidebar-kaki button {
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    height: auto;
+    padding: 10px 12px;
+    color: var(--teks-2);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-kecil);
+    font-weight: 500;
+}
+
+.sidebar-kaki button {
+    height: 36px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.sidebar nav button:hover:not(:disabled),
+.sidebar-kaki button:hover:not(:disabled) {
+    color: var(--teks);
+    background: var(--latar);
+    border-color: transparent;
+}
+
+.sidebar nav button.aktif,
+.sidebar nav button.aktif:hover:not(:disabled) {
+    color: var(--hijau-tua);
+    background: var(--hijau-pucat);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--hijau);
+}
+
+.sidebar .label {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sidebar .ikon {
+    width: 20px;
+    height: 20px
+}
+
+.sidebar-kaki {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    padding: 0 12px;
+    border-top: 1px solid var(--garis);
+}
+
+.sidebar-kaki .panah {
+    transition: transform .2s ease
+}
+
+/* Mode ciut: hanya ikon */
+.sidebar.ciut {
+    width: var(--lebar-ciut)
+}
+
+.sidebar.ciut .merek-teks,
+.sidebar.ciut .label {
+    display: none
+}
+
+.sidebar.ciut .sidebar-kepala {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0
+}
+
+.sidebar.ciut nav button,
+.sidebar.ciut .sidebar-kaki button {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0
+}
+
+.sidebar.ciut .panah {
+    transform: rotate(180deg)
+}
+
+.konten {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+main {
+    flex: 1;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 20px 24px;
+    overflow-y: auto;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 64px;
+    padding: 0 24px;
+    background: var(--putih);
+    border-bottom: 1px solid var(--garis);
+    box-shadow: var(--bayangan-1);
+}
+
 /* ---------- Header ---------- */
-header {
+/* header {
     position: sticky;
     top: 0;
     z-index: 5;
@@ -164,7 +344,7 @@ header nav button.aktif:hover:not(:disabled) {
     color: var(--hijau-tua);
     border-bottom-color: var(--hijau);
     font-weight: 600;
-}
+} */
 
 .spasi {
     flex: 1
@@ -237,14 +417,6 @@ header nav button.aktif:hover:not(:disabled) {
 }
 
 /* ---------- Kerangka halaman ---------- */
-main {
-    flex: 1;
-    width: 100%;
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 24px;
-}
-
 .tab,
 .sub {
     display: none
@@ -864,19 +1036,14 @@ button.bahaya:hover:not(:disabled) {
     margin: 10px 6px 0 0
 }
 
-#sub-instansi,
-#sub-sinkron {
-    max-width: 760px
-}
-
-#sub-sinkron .peringatan:first-child {
+/* #sub-sinkron .peringatan:first-child {
     margin-top: 0
-}
+} */
 
 /* ---------- Toast ---------- */
 #toast {
     position: fixed;
-    top: 76px;
+    top: 68px;
     left: 50%;
     z-index: 40;
     max-width: min(560px, calc(100vw - 32px));
@@ -1153,7 +1320,12 @@ button.bahaya:hover:not(:disabled) {
 
 /* ---------- Footer ---------- */
 footer {
-    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    height: 48px;
+    padding: 0 24px;
     text-align: center;
     font-size: 12px;
     color: var(--redup);
@@ -1245,18 +1417,30 @@ footer .hati {
 
 /* ---------- Responsif ---------- */
 @media (max-width: 960px) {
-    header {
-        flex-wrap: wrap;
-        gap: 8px 16px;
-        padding: 8px 16px
+    .sidebar {
+        width: 68px
     }
 
-    header nav {
-        order: 9;
-        width: 100%;
-        min-height: 44px;
-        margin-left: 0;
-        overflow-x: auto
+    .sidebar .merek-teks,
+    .sidebar .label,
+    .sidebar-kaki {
+        display: none
+    }
+
+    .sidebar-kepala {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0
+    }
+
+    .sidebar nav button {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0
+    }
+
+    .topbar {
+        padding: 0 16px
     }
 
     main {
@@ -1279,5 +1463,35 @@ footer .hati {
 
     .kotak {
         padding: 20px
+    }
+}
+
+.grid-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.grid-panel>.panel,
+.grid-panel>.panel+.panel {
+    margin-top: 0;
+}
+
+.grid-panel .lebar-penuh {
+    grid-column: 1 / -1;
+}
+
+.judul-bagian {
+    margin: 28px 0 4px;
+    padding-top: 20px;
+    font-size: 16px;
+    font-weight: 700;
+    border-top: 1px solid var(--garis-tebal);
+}
+
+@media (max-width: 1100px) {
+    .grid-panel {
+        grid-template-columns: 1fr;
     }
 }

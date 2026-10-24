@@ -1,4 +1,4 @@
-# MBG - Makanan Bergizi Gratis
+# SI'OM - Sirkulasi Ompreng MBG
 
 Aplikasi desktop offline untuk mencatat pengambilan dan pengembalian ompreng Makanan Bergizi Gratis (MBG) memakai kartu RFID. Siswa tap kartu, operator mengisi jumlah, nama pengambil dan pengembali tercatat otomatis, dan laporan diekspor ke Excel dan PDF.
 
