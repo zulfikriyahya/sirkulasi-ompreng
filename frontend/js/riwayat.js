@@ -186,7 +186,7 @@ const Riwayat = {
       try {
         await API.HapusTransaksi(r.id, _r("h-alasan").value);
         Dash.tutupModal();
-        toast("Transaksi dihapus", "ok");
+        toast("Transaksi dihapus", "ok", "hapus");
         this.muatTrx();
       } catch (e) {
         _r("h-galat").textContent = String(e.message || e);
@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         await API.TutupHari(_r("t-cat").value);
         Dash.tutupModal();
-        toast("Hari ditutup", "ok");
+        toast("Hari ditutup", "ok", "selesai");   
         Dash.muat();
       } catch (e) {
         _r("t-galat").textContent = String(e.message || e);

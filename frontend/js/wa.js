@@ -10,41 +10,52 @@
   let timer = null;
 
   const html = `
-  <h3>Notifikasi WhatsApp</h3>
-  <form id="wa-form" class="wa-grid">
-    <label class="wa-cek"><input type="checkbox" id="wa-aktif"> Aktifkan notifikasi ke wali kelas</label>
-    <label>Alamat layanan <input id="wa-url" type="url" required></label>
-    <label>Key ID <input id="wa-key" autocomplete="off"></label>
-    <label>Secret <input id="wa-secret" type="password" autocomplete="new-password"></label>
-    <label>Template pengambilan <input id="wa-tpl-ambil"></label>
-    <label>Template pengembalian <input id="wa-tpl-kembali"></label>
-    <div><button type="submit">Simpan</button> <span id="wa-pesan-simpan"></span></div>
-  </form>
-  <h4>Uji kirim</h4>
-  <div class="wa-baris">
-    <input id="wa-uji-no" placeholder="Nomor WhatsApp, mis. 0812xxxxxxx">
-    <button type="button" id="wa-uji-btn">Kirim pesan uji</button>
-    <span id="wa-pesan-uji"></span>
+  <div class="wa-layout">
+    <section class="wa-kolom">
+      <h3>Konfigurasi</h3>
+      <form id="wa-form" class="wa-grid">
+        <label class="wa-cek"><input type="checkbox" id="wa-aktif"> Aktifkan notifikasi ke wali kelas</label>
+        <label class="wa-penuh">Alamat layanan <input id="wa-url" type="url" required></label>
+        <label>Key ID <input id="wa-key" autocomplete="off"></label>
+        <label>Secret <input id="wa-secret" type="password" autocomplete="new-password"></label>
+        <label>Template pengambilan <input id="wa-tpl-ambil"></label>
+        <label>Template pengembalian <input id="wa-tpl-kembali"></label>
+        <div class="wa-penuh wa-aksi"><button type="submit" class="utama">Simpan</button> <span id="wa-pesan-simpan"></span></div>
+      </form>
+    </section>
+    <section class="wa-kolom">
+      <h3>Uji kirim</h3>
+      <p class="kecil">Mengirim pesan contoh memakai template pengambilan ke nomor di bawah.</p>
+      <div class="wa-baris">
+        <input id="wa-uji-no" class="wa-lebar" placeholder="Nomor WhatsApp, mis. 0812xxxxxxx">
+        <button type="button" id="wa-uji-btn">Kirim pesan uji</button>
+      </div>
+      <span id="wa-pesan-uji"></span>
+    </section>
   </div>
-  <h4>Riwayat notifikasi</h4>
-  <div class="wa-baris">
-    <span id="wa-ringkas"></span>
-    <select id="wa-filter">
-      <option value="">Semua</option><option value="ANTRE">Antre</option>
-      <option value="TERKIRIM">Terkirim</option><option value="GAGAL">Gagal</option>
-    </select>
-    <button type="button" id="wa-segar">Segarkan</button>
-  </div>
-  <div class="wa-tabel"><table>
-    <thead><tr><th>Waktu</th><th>Jenis</th><th>Wali</th><th>Nomor</th><th>Status</th><th>Keterangan</th><th></th></tr></thead>
-    <tbody id="wa-isi"></tbody>
-  </table></div>`;
+  <section class="wa-riwayat">
+    <h3>Riwayat notifikasi</h3>
+    <div class="wa-baris">
+      <span id="wa-ringkas"></span>
+      <span class="spasi"></span>
+      <select id="wa-filter">
+        <option value="">Semua</option><option value="ANTRE">Antre</option>
+        <option value="TERKIRIM">Terkirim</option><option value="GAGAL">Gagal</option>
+      </select>
+      <button type="button" id="wa-segar">Segarkan</button>
+    </div>
+    <div class="wa-tabel"><table>
+      <thead><tr><th>Waktu</th><th>Jenis</th><th>Wali</th><th>Nomor</th><th>Status</th><th>Keterangan</th><th></th></tr></thead>
+      <tbody id="wa-isi"></tbody>
+    </table></div>
+  </section>`;
 
   const $ = (id) => document.getElementById(id);
-  const pesan = (id, teks, galat) => {
+  const pesan = (id, teks, galat, senyap) => {
     const e = $(id);
     e.textContent = teks;
     e.className = galat ? "wa-galat" : "wa-ok";
+    if (!senyap) bunyi(galat ? "err" : "ok");
   };
 
   async function muatConfig() {
@@ -117,7 +128,7 @@
     $("wa-uji-btn").addEventListener("click", async () => {
       const btn = $("wa-uji-btn");
       btn.disabled = true;
-      pesan("wa-pesan-uji", "Mengirim...");
+      pesan("wa-pesan-uji", "Mengirim...", false, true);
       try {
         const u = await S().UjiKirimWA($("wa-uji-no").value);
         pesan("wa-pesan-uji", `Diterima layanan (job ${u.job_id}, status ${u.status}).`);
@@ -133,8 +144,10 @@
       if (!id) return;
       try {
         await S().UlangiWA(Number(id));
+        toast("Diantrekan ulang", "info");
       } catch (e) {
-        alert(e);
+        // prettier-ignore
+        bunyi("err"); alert(e);
       }
       muatRiwayat();
     });
@@ -146,7 +159,7 @@
       const el = document.querySelector(selector);
       if (!el) return;
       if (!$("wa-form")) pasang(el);
-      await muatConfig().catch((e) => pesan("wa-pesan-simpan", String(e), true));
+      await muatConfig().catch((e) => pesan("wa-pesan-simpan", String(e), true, true));
       muatRiwayat();
       clearInterval(timer);
       timer = setInterval(() => {

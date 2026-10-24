@@ -12,7 +12,14 @@ const Master = {
     document.getElementById("p-hid").value = p.hid_ambang_ms;
     Tap.ambangMs = p.hid_ambang_ms;
     const i = await API.InfoSistem();
-    document.getElementById("info-sistem").textContent = `Versi ${i.versi} - Data: ${i.data_dir}`;
+    const bv = document.getElementById("info-versi");
+    bv.textContent = "Versi " + i.versi;
+    bv.classList.toggle("dev", String(i.versi).toLowerCase() === "dev");
+    const bd = document.getElementById("info-data");
+    document.getElementById("info-data-teks").textContent = i.data_dir;
+    bd.dataset.salin = i.data_dir;
+    bd.title = "Klik untuk menyalin: " + i.data_dir;
+    bd.disabled = false;
   },
   async simpanInstansi() {
     try {
@@ -74,11 +81,22 @@ const Master = {
         nb.textContent = "Nonaktifkan";
         nb.className = "bahaya";
         nb.onclick = async () => {
-          if (!confirm(`Nonaktifkan kelas ${k.nama}?`)) return;
+          const h = await Dash.konfirmasi({
+            mode: "Nonaktifkan",
+            judul: "Nonaktifkan kelas?",
+            label: "Kelas",
+            nama: k.nama,
+            detail: "Ketua: " + k.nama_ketua,
+            pesan: "Kelas bisa diaktifkan kembali lewat opsi Tampilkan kelas nonaktif.",
+            aksi: "Nonaktifkan",
+            alasan: true,
+          });
+          if (!h) return;
           try {
-            await API.NonaktifkanKelas(k.id, "dari layar master");
+            await API.NonaktifkanKelas(k.id, h.alasan || "dari layar master");
             this.muatKelas();
             Dash.muat();
+            toast("Kelas dinonaktifkan", "ok", "hapus");
           } catch (e) {
             toast(String(e.message || e), "err");
           }
@@ -165,12 +183,22 @@ const Master = {
         nb.textContent = "Nonaktifkan";
         nb.className = "bahaya";
         nb.onclick = async () => {
-          if (!confirm(`Nonaktifkan wali kelas ${w.nama}? Tautan ke kelasnya akan dilepas.`))
-            return;
+          const h = await Dash.konfirmasi({
+            mode: "Nonaktifkan",
+            judul: "Nonaktifkan wali kelas?",
+            label: "Wali kelas",
+            nama: w.nama,
+            detail: "Kelas diampu: " + (w.daftar_kelas || "-"),
+            pesan: "Tautan ke kelasnya akan dilepas.",
+            aksi: "Nonaktifkan",
+            alasan: true,
+          });
+          if (!h) return;
           try {
-            await API.NonaktifkanWaliKelas(w.id, "dari layar master");
+            await API.NonaktifkanWaliKelas(w.id, h.alasan || "dari layar master");
             this.muatWali();
             this.muatKelas();
+            toast("Wali kelas dinonaktifkan", "ok", "hapus");
           } catch (e) {
             toast(String(e.message || e), "err");
           }
@@ -183,6 +211,7 @@ const Master = {
         ab.onclick = async () => {
           try {
             await API.AktifkanWaliKelas(w.id, "dari layar master");
+            toast("Wali kelas diaktifkan", "ok");
             this.muatWali();
             this.muatKelas();
           } catch (e) {
@@ -228,10 +257,20 @@ const Master = {
       b.textContent = "Hapus";
       b.className = "bahaya";
       b.onclick = async () => {
-        if (!confirm("Hapus kartu " + c.uid + "?")) return;
+        const h = await Dash.konfirmasi({
+          mode: "Hapus",
+          judul: "Hapus kartu?",
+          label: "Kartu " + c.uid,
+          nama: c.nama_siswa || "(tanpa nama)",
+          detail: c.nisn ? "NISN " + c.nisn : "",
+          pesan: "Daftarkan ulang bila kartu ini ingin dipakai lagi.",
+          aksi: "Hapus",
+        });
+        if (!h) return;
         try {
           await API.HapusKartu(c.uid);
           this.muatKartu();
+          toast("Kartu dihapus", "ok", "hapus");
         } catch (e) {
           toast(String(e.message || e), "err");
         }

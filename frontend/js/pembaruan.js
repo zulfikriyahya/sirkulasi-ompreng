@@ -23,7 +23,7 @@ const Pembaruan = {
       const i = await API.PeriksaPembaruan(false);
       this.info = i;
       if (i.ada) {
-        this.tampilBadge(i);
+        this.tampilBadge(i); // bunyi("info") dihapus
         this.tampil(i);
       } else toast(i.pesan || "Aplikasi sudah versi terbaru", "ok");
     } catch (e) {
@@ -57,7 +57,7 @@ const Pembaruan = {
   },
 
   tampil(i) {
-    Tap.handler = () => toast("Selesaikan pembaruan dulu", "info");
+    Tap.handler = () => toast("Selesaikan pembaruan dulu", "info", "peringatan");
     const manual = i.cara === "MANUAL";
     const mb = i.ukuran ? ` (${(i.ukuran / 1048576).toFixed(1)} MB)` : "";
     Dash.bukaModal(`
@@ -100,7 +100,9 @@ const Pembaruan = {
     _r("pb-status").textContent = "Menyiapkan cadangan dan unduhan...";
     try {
       const h = await API.PasangPembaruan();
+      // di pasang(), pada cabang h.keluar:
       if (h.keluar) {
+        bunyi("selesai");
         _r("pb-status").textContent = h.pesan;
         return;
       }
@@ -115,21 +117,19 @@ const Pembaruan = {
   },
 
   hasilLinux(h) {
-    Dash.bukaModal(`
+    bunyi("selesai");
+    Dash.bukaModal(
+      `
           <h2>Siap dipasang</h2>
           <p>${esc(h.pesan)}</p>
           <input id="pb-cmd" readonly value="${esc(h.perintah)}">
           <p class="kecil">Berkas: ${esc(h.berkas)}<br>Cadangan database: ${esc(h.cadangan)}</p>
-          <div class="aksi"><button id="pb-tutup">Tutup</button><button id="pb-salin">Salin perintah</button></div>`);
+          <div class="aksi"><button id="pb-tutup">Tutup</button><button id="pb-salin">Salin perintah</button></div>`,
+      true
+    );
     _r("pb-tutup").onclick = () => this.tutup();
     _r("pb-salin").onclick = async () => {
-      const el = _r("pb-cmd");
-      try {
-        await navigator.clipboard.writeText(el.value);
-      } catch (e) {
-        el.select();
-        document.execCommand("copy");
-      }
+      await salin(_r("pb-cmd").value);
       toast("Perintah disalin", "ok");
     };
   },

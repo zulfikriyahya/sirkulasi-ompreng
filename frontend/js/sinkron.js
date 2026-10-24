@@ -48,7 +48,7 @@ const Sinkron = {
   },
 
   tampilModal() {
-    Tap.handler = () => toast("Selesaikan impor dulu", "info"); // tap tidak boleh memproses transaksi
+    Tap.handler = () => toast("Selesaikan impor dulu", "info", "peringatan"); // tap tidak boleh memproses transaksi
     Dash.bukaModal(`
           <h2>Impor data master</h2>
           <p class="kecil">Berkas: <b>${esc(this.path.split(/[\\/]/).pop())}</b></p>

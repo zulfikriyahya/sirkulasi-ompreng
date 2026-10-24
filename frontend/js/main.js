@@ -2,6 +2,7 @@ let tabAktif = "beranda",
   subAktif = "instansi";
 
 function pilihTab(t) {
+  Suara.tahan();
   tabAktif = t;
   document
     .querySelectorAll(".sidebar nav button")
@@ -17,6 +18,7 @@ function pilihTab(t) {
 }
 
 function pilihSub(s) {
+  Suara.tahan();
   subAktif = s;
   document
     .querySelectorAll(".subnav button")
@@ -34,7 +36,7 @@ function pasangHandler() {
       toast("UID terbaca: " + uid, "info");
     };
   } else if (tabAktif === "riwayat" || tabAktif === "ekspor") {
-    Tap.handler = () => toast("Pindah ke tab Beranda untuk memproses tap", "info");
+    Tap.handler = () => toast("Pindah ke tab Beranda untuk memproses tap", "info", "peringatan");
   } else {
     Tap.handler = prosesTap;
   }
@@ -72,6 +74,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     document.getElementById("um-batal").onclick = () => Dash.tutupModal();
   };
+  const bd = document.getElementById("info-data");
+  if (bd)
+    bd.onclick = async () => {
+      const t = bd.dataset.salin;
+      if (!t) return;
+      await salin(t);
+      toast("Lokasi data disalin", "ok");
+      const lb = bd.querySelector(".jalur-label");
+      bd.classList.add("tersalin");
+      lb.textContent = "Tersalin";
+      setTimeout(() => {
+        bd.classList.remove("tersalin");
+        lb.textContent = "Data";
+      }, 1400);
+    };
 
   try {
     const p = await API.GetPengaturan();
@@ -81,15 +98,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   Dash.muat();
   setInterval(() => {
     if (tabAktif === "beranda" && document.getElementById("modal").className === "hidden")
-      Dash.muat();
+      Suara.tahan(1500);
+    Dash.muat();
   }, 30000);
 });
 
 // ---- Reader serial: event dari backend ----
+let _readerOk = null;
 function tampilStatusReader(st) {
   const el = document.getElementById("status-reader");
   if (!el) return;
   const ok = !!(st && st.terhubung);
+  bunyi(ok ? "ok" : "err", true);
+  if (_readerOk !== null && _readerOk !== ok) {
+    bunyi(ok ? "ok" : "err");
+    toast(ok ? "Reader terhubung" : "Reader TERPUTUS", ok ? "ok" : "err", false);
+  }
+  _readerOk = ok;
   el.className = "pil-status " + (ok ? "ok" : "putus");
   el.querySelector(".teks").textContent = ok
     ? "Reader serial terhubung (" + st.port + ")"
@@ -98,9 +123,11 @@ function tampilStatusReader(st) {
     ? "Reader serial siap menerima tap"
     : "Reader serial tidak terhubung. Reader HID (keyboard) tetap bisa dipakai.";
 }
+
 document.addEventListener("DOMContentLoaded", () => {
   if (window.runtime && window.runtime.EventsOn) {
     window.runtime.EventsOn("card:tap", (uid) => {
+      Suara.izinkan();
       if (Tap.handler) Tap.handler(uid);
     });
     window.runtime.EventsOn("reader:status", tampilStatusReader);
@@ -135,4 +162,39 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem(KUNCI, ciut ? "1" : "0");
     } catch (e) {}
   };
+});
+
+// ---- Tema: terang/gelap, awalnya mengikuti sistem, pilihan diingat ----
+document.addEventListener("DOMContentLoaded", () => {
+  const html = document.documentElement;
+  const btn = document.getElementById("btn-tema");
+  if (!btn) return;
+  const KUNCI = "mbg.tema";
+  const tersimpan = () => {
+    try {
+      return localStorage.getItem(KUNCI);
+    } catch (e) {
+      return null;
+    }
+  };
+  const terapkan = (t) => {
+    html.setAttribute("data-tema", t);
+    const label = t === "gelap" ? "Ganti ke mode terang" : "Ganti ke mode gelap";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+  };
+  terapkan(html.getAttribute("data-tema") || "terang");
+  btn.onclick = () => {
+    const baru = html.getAttribute("data-tema") === "gelap" ? "terang" : "gelap";
+    html.classList.add("ganti-tema");
+    terapkan(baru);
+    setTimeout(() => html.classList.remove("ganti-tema"), 350);
+    try {
+      localStorage.setItem(KUNCI, baru);
+    } catch (e) {}
+  };
+  // selama pengguna belum memilih sendiri, ikuti perubahan tema sistem
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+    if (!tersimpan()) terapkan(e.matches ? "gelap" : "terang");
+  });
 });

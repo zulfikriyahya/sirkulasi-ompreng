@@ -11,6 +11,7 @@ document.addEventListener("keydown", e => {
         if (Tap.buf.length >= 8 && Tap.buf.length <= 10) {
             e.preventDefault(); e.stopPropagation();
             const uid = Tap.buf; Tap.buf = "";
+            Suara.izinkan();    
             if (Tap.handler) Tap.handler(uid);
             return;
         }
