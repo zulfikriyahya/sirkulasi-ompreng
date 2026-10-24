@@ -26,8 +26,8 @@ Unduh dari [halaman Releases](https://github.com/zulfikriyahya/sirkulasi-ompreng
 | OS | Berkas | Cara pasang |
 |---|---|---|
 | Windows 10/11 | `mbg-amd64-installer.exe` | Jalankan installer |
-| Debian/Ubuntu | `mbg_0.2.0_amd64.deb` | `sudo apt install ./mbg_0.2.0_amd64.deb` |
-| Fedora/RHEL 10 | `mbg-0.2.0-1.x86_64.rpm` | `sudo dnf install ./mbg-0.2.0-1.x86_64.rpm` |
+| Debian/Ubuntu | `mbg_0.2.1_amd64.deb` | `sudo apt install ./mbg_0.2.1_amd64.deb` |
+| Fedora/RHEL 10 | `mbg-0.2.1-1.x86_64.rpm` | `sudo dnf install ./mbg-0.2.1-1.x86_64.rpm` |
 | Linux (portabel) | `mbg-linux-amd64` | `chmod +x mbg-linux-amd64 && ./mbg-linux-amd64` |
 
 Paket Linux memasang dependensi (GTK3 dan WebKitGTK 4.1) otomatis dan menyertakan aturan udev agar reader bisa diakses tanpa grup `dialout`. Cabut dan colok ulang reader setelah instalasi.
@@ -122,7 +122,7 @@ Build semua target:
 ```bash
 go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
-export VERSION=0.2.0
+export VERSION=0.2.1
 LDF="-X mbg/internal/versi.Versi=${VERSION}"
 
 wails build -clean -ldflags "$LDF"
@@ -145,10 +145,10 @@ Catatan: `nfpm.yaml` mengambil binary Linux dari `dist/mbg-linux-amd64`, jadi bu
 
 Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh auth login`).
 
-1. Tentukan nomor versi (contoh `0.2.0`). Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada lagi string versi yang diubah di kode:
+1. Tentukan nomor versi (contoh `0.2.1`). Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada lagi string versi yang diubah di kode:
 
    ```bash
-   export VERSION=0.2.0
+   export VERSION=0.2.1
    sed -i "s/0\.4\.0/${VERSION}/g" README.md
    ```
 
