@@ -262,7 +262,7 @@ Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh
 
    ```bash
    export VERSION=0.3.2
-   sed -i "s/0\.3\.1/${VERSION}/g" README.md   # ganti 0.3.1 dengan versi sebelumnya
+   sed -i "s/0\.3\.1/${VERSION}/g" README.md
    ```
 
 2. Jalankan perintah di bagian **Build** (semua target) dengan `VERSION` yang sama.
