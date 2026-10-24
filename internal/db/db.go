@@ -44,12 +44,14 @@ func Migrate(conn *sql.DB) error {
 	if _, err := conn.Exec(schema); err != nil {
 		return err
 	}
-	for _, k := range []struct{ tabel, kolom string }{
-		{"kartu", "nisn"}, {"kartu", "nama_siswa"},
-		{"transaksi", "nisn_ambil"}, {"transaksi", "nama_ambil"},
-		{"transaksi", "nisn_kembali"}, {"transaksi", "nama_kembali"},
+	for _, k := range []struct{ tabel, kolom, tipe string }{
+		{"kartu", "nisn", "TEXT"}, {"kartu", "nama_siswa", "TEXT"},
+		{"transaksi", "nisn_ambil", "TEXT"}, {"transaksi", "nama_ambil", "TEXT"},
+		{"transaksi", "nisn_kembali", "TEXT"}, {"transaksi", "nama_kembali", "TEXT"},
+		{"pengaturan", "periksa_otomatis", "INTEGER NOT NULL DEFAULT 1"},
+		{"pengaturan", "pra_rilis", "INTEGER NOT NULL DEFAULT 0"},
 	} {
-		if err := tambahKolom(conn, k.tabel, k.kolom); err != nil {
+		if err := tambahKolom(conn, k.tabel, k.kolom, k.tipe); err != nil {
 			return err
 		}
 	}
@@ -65,7 +67,7 @@ func Migrate(conn *sql.DB) error {
 	return err
 }
 
-func tambahKolom(conn *sql.DB, tabel, kolom string) error {
+func tambahKolom(conn *sql.DB, tabel, kolom, tipe string) error {
 	rows, err := conn.Query(fmt.Sprintf(`PRAGMA table_info(%s)`, tabel))
 	if err != nil {
 		return err
@@ -87,7 +89,7 @@ func tambahKolom(conn *sql.DB, tabel, kolom string) error {
 	if ada {
 		return nil
 	}
-	_, err = conn.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s TEXT`, tabel, kolom))
+	_, err = conn.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s %s`, tabel, kolom, tipe))
 	return err
 }
 

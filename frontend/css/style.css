@@ -630,3 +630,53 @@ button.bahaya:hover:not(:disabled) {
     background: var(--hijau-tua);
     border-color: var(--hijau-tua)
 }
+
+/* Pembaruan */
+.badge {
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #fff;
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    border-radius: 999px
+}
+
+.badge:hover:not(:disabled) {
+    background: #1e40af;
+    border-color: #1e40af
+}
+
+.catatan-rilis {
+    max-height: 200px;
+    overflow: auto;
+    margin: 10px 0;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 13px;
+    white-space: pre-wrap;
+    background: #f8fafc;
+    border: 1px solid var(--garis);
+    border-radius: 8px
+}
+
+#pb-prog {
+    width: 100%;
+    margin: 6px 0
+}
+
+#pb-cmd {
+    width: 100%;
+    font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+    font-size: 13px
+}
+
+#pb-ok {
+    color: #fff;
+    background: var(--hijau);
+    border-color: var(--hijau)
+}
+
+#pb-ok:hover:not(:disabled) {
+    background: var(--hijau-tua);
+    border-color: var(--hijau-tua)
+}

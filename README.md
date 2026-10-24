@@ -17,6 +17,7 @@ Dibuat dengan Go, SQLite, dan Wails v2. Berjalan di Windows 10+ dan Linux (Debia
 - Edit dan hapus transaksi dengan alasan wajib, tercatat di audit log
 - Ekspor laporan formal ke Excel dan PDF (A4 landscape, kop dan logo instansi, kolom Pengambil dan Pengembali, baris merah untuk kekurangan)
 - Data lokal di SQLite, tanpa login dan tanpa internet
+- Pembaruan aplikasi dari GitHub Release (periksa otomatis, verifikasi checksum, cadangan database otomatis sebelum memperbarui)
 
 ## Instalasi
 
@@ -53,6 +54,8 @@ Kartu tanpa NISN dan nama (kartu kelas) tetap berfungsi; kolom pengambil/pengemb
 Data tidak terhapus saat update atau uninstall. Kolom baru ditambahkan otomatis saat aplikasi dibuka, jadi database versi lama tetap kompatibel.
 
 Untuk mengosongkan, tutup aplikasi lalu hapus `mbg.db`, `mbg.db-wal`, dan `mbg.db-shm`.
+
+Data: cadangan otomatis tersimpan di cadangan/ dalam folder data (~/.local/share/mbg/cadangan/ atau %APPDATA%\MBG\cadangan\), lima terakhir.
 
 ### Cadangan dan pemindahan database
 
@@ -119,19 +122,22 @@ Build semua target:
 ```bash
 go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
-export VERSION=0.1.1
+export VERSION=0.1.2
+LDF="-X mbg/internal/versi.Versi=${VERSION}"
 
-wails build -clean
+wails build -clean -ldflags "$LDF"
 cp build/bin/mbg dist/mbg-linux-amd64
 
-wails build -clean -platform windows/amd64 -nsis -webview2 embed
+wails build -clean -platform windows/amd64 -nsis -webview2 embed -ldflags "$LDF"
 cp build/bin/mbg-amd64-installer.exe dist/
 
 nfpm package -p deb -t dist/
 nfpm package -p rpm -t dist/
+
+(cd dist && sha256sum mbg-linux-amd64 mbg_*.deb mbg-*.rpm mbg-amd64-installer.exe > checksums.txt)
 ```
 
-Hasil di `dist/`: `mbg-linux-amd64`, `mbg_0.1.1_amd64.deb`, `mbg-0.1.1-1.x86_64.rpm`, `mbg-amd64-installer.exe`.
+Hasil di `dist/`: `mbg-linux-amd64`, `.deb`, `.rpm`, `mbg-amd64-installer.exe`, dan `checksums.txt` (dipakai fitur pembaruan untuk verifikasi SHA256).
 
 Catatan: `nfpm.yaml` mengambil binary Linux dari `dist/mbg-linux-amd64`, jadi build Linux harus dijalankan lebih dulu. `.rpm` dari Debian 13 menautkan glibc baru, sehingga tidak cocok untuk RHEL/Rocky 9; bangun di container Rocky 9 untuk target itu.
 
@@ -139,13 +145,11 @@ Catatan: `nfpm.yaml` mengambil binary Linux dari `dist/mbg-linux-amd64`, jadi bu
 
 Prasyarat: [GitHub CLI](https://cli.github.com) (`sudo apt install gh`, lalu `gh auth login`).
 
-1. Naikkan nomor versi (contoh ke `0.1.2`):
+1. Tentukan nomor versi (contoh `0.1.2`). Versi aplikasi dan paket Linux diambil dari variabel `VERSION` saat build, jadi tidak ada lagi string versi yang diubah di kode:
 
    ```bash
    export VERSION=0.1.2
-   sed -i "s/0\.1\.1-stable/${VERSION}-stable/" internal/service/service.go
-   sed -i "s/^version: .*/version: ${VERSION}/" nfpm.yaml
-   sed -i "s/0\.1\.1/${VERSION}/g" README.md
+   sed -i "s/0\.4\.0/${VERSION}/g" README.md
    ```
 
 2. Jalankan perintah di bagian **Build** (semua target) dengan `VERSION` yang sama.

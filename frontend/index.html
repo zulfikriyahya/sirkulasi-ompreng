@@ -18,6 +18,7 @@
             <button data-tab="ekspor">Ekspor</button>
         </nav>
         <span id="status-reader" class="kecil">Reader serial: mencari...</span>
+        <button id="badge-pembaruan" class="badge hidden"></button>
         <span id="info-tanggal"></span>
     </header>
 
@@ -81,6 +82,11 @@
                     <span class="kecil" id="logo-status"></span>
                     <button id="logo-pilih">Pilih logo (PNG/JPEG)</button>
                     <button id="logo-hapus">Hapus logo</button>
+                </div>
+                <div class="form-baris">
+                    <button id="pb-periksa">Periksa pembaruan</button>
+                    <label class="cek"><input type="checkbox" id="pb-otomatis"> Periksa pembaruan otomatis</label>
+                    <label class="cek"><input type="checkbox" id="pb-pra"> Sertakan pra-rilis</label>
                 </div>
                 <div class="form-baris"><button id="p-simpan" class="utama">Simpan</button></div>
                 <p class="kecil" id="info-sistem"></p>
@@ -203,7 +209,8 @@
                         <option>kelas</option>
                         <option>kartu</option>
                         <option>pengaturan</option>
-                                                <option>master</option>
+                        <option>master</option>
+                        <option>aplikasi</option>
                         <option>hari</option>
                     </select>
                     <button id="ra-cari" class="utama">Tampilkan</button>
@@ -272,7 +279,8 @@
     <script src="js/master.js"></script>
     <script src="js/riwayat.js"></script>
     <script src="js/ekspor.js"></script>
-        <script src="js/sinkron.js"></script>
+    <script src="js/sinkron.js"></script>
+        <script src="js/pembaruan.js"></script>
     <script src="js/main.js"></script>
     <script>
         document.getElementById("link-footer").addEventListener("click", function (e) {

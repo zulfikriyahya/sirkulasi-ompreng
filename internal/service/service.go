@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"mbg/internal/timeutil"
+	"mbg/internal/versi"
 )
 
 type pendingInput struct {
@@ -29,6 +30,7 @@ type Service struct {
 	app        appCtx
 	siswaNISN  string
 	siswaNama  string
+	pemb       pembState
 }
 
 func New(db *sql.DB, dir string) *Service {
@@ -44,7 +46,8 @@ type InfoSistem struct {
 	DataDir string `json:"data_dir"`
 }
 
-func (s *Service) InfoSistem() InfoSistem { return InfoSistem{Versi: "0.1.1-stable", DataDir: s.dir} }
+// InfoSistem: versi dibaca dari internal/versi (disuntikkan lewat -ldflags saat build).
+func (s *Service) InfoSistem() InfoSistem { return InfoSistem{Versi: versi.Versi, DataDir: s.dir} }
 
 func js(v any) string {
 	if v == nil {

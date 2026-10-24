@@ -178,3 +178,32 @@ type HasilImpor struct {
 	Ringkasan RingkasanImpor `json:"ringkasan"`
 	Pesan     string         `json:"pesan"`
 }
+
+// ---------- Pembaruan aplikasi ----------
+
+type OpsiPembaruan struct {
+	Otomatis bool `json:"otomatis"` // periksa otomatis saat aplikasi dibuka
+	PraRilis bool `json:"pra_rilis"`
+}
+
+// Cara: WINDOWS | LINUX_DEB | LINUX_RPM | MANUAL (tidak ada berkas pemasang yang cocok).
+type InfoPembaruan struct {
+	Ada          bool   `json:"ada"`
+	VersiSaatIni string `json:"versi_saat_ini"`
+	VersiBaru    string `json:"versi_baru"`
+	Catatan      string `json:"catatan"`
+	URLHalaman   string `json:"url_halaman"`
+	Cara         string `json:"cara"`
+	NamaAset     string `json:"nama_aset"`
+	Ukuran       int64  `json:"ukuran"`
+	ChecksumAda  bool   `json:"checksum_ada"`
+	Pesan        string `json:"pesan"`
+}
+
+type HasilPasang struct {
+	Berkas   string `json:"berkas"`
+	Cadangan string `json:"cadangan"`
+	Perintah string `json:"perintah"` // Linux: perintah yang dijalankan pengguna sendiri
+	Pesan    string `json:"pesan"`
+	Keluar   bool   `json:"keluar"` // Windows: aplikasi akan ditutup
+}
