@@ -56,9 +56,12 @@ const Riwayat = {
           v(r.jumlah_kembali),
           (r.waktu_ambil || "-") + " / " + (r.waktu_kembali || "-"),
           r.keterangan,
-        ].forEach((t) => {
+        ].forEach((t, i) => {
           const td = document.createElement("td");
-          td.textContent = t;
+          if (i === 5) td.appendChild(lencana(t));
+          else td.textContent = t;
+          if (i === 6 || i === 7) td.className = "num";
+          else if (i === 8) td.className = "waktu";
           tr.appendChild(td);
         });
         if (r.pengembalian && r.pengembalian.length > 1) {
@@ -131,12 +134,15 @@ const Riwayat = {
       .map((s) => `<option ${s === r.status ? "selected" : ""}>${s}</option>`)
       .join("");
     Dash.bukaModal(`
-          <h2>Ubah transaksi - ${esc(r.nama_kelas)} (${esc(r.tanggal)})</h2>
+          <h2>Ubah transaksi</h2>
+          <p>${esc(r.nama_kelas)} &middot; ${esc(r.tanggal)}</p>
           <label>Status <select id="e-status">${opsi}</select></label>
-          <label>Jumlah ambil <input id="e-ja" type="number" min="1" value="${n(r.jumlah_ambil)}"></label>
-          <label>Jumlah kembali <input id="e-jk" type="number" min="0" value="${n(r.jumlah_kembali)}"></label>
-          <label>Waktu ambil (HH:MM) <input id="e-wa" maxlength="5" value="${esc(r.waktu_ambil)}"></label>
-          <label>Waktu kembali (HH:MM) <input id="e-wk" maxlength="5" value="${esc(r.waktu_kembali)}"></label>
+          <div class="dua-kolom">
+            <label>Jumlah ambil <input id="e-ja" type="number" min="1" value="${n(r.jumlah_ambil)}"></label>
+            <label>Jumlah kembali <input id="e-jk" type="number" min="0" value="${n(r.jumlah_kembali)}"></label>
+            <label>Waktu ambil (HH:MM) <input id="e-wa" maxlength="5" value="${esc(r.waktu_ambil)}"></label>
+            <label>Waktu kembali (HH:MM) <input id="e-wk" maxlength="5" value="${esc(r.waktu_kembali)}"></label>
+          </div>
           <label>Catatan <input id="e-cat" value="${esc(r.catatan)}"></label>
           <label>Alasan perubahan (wajib) <input id="e-alasan"></label>
           <div class="galat" id="e-galat"></div>

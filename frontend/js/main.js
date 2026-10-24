@@ -4,7 +4,7 @@ function pilihTab(t) {
     tabAktif = t;
     document.querySelectorAll("header nav button").forEach(b => b.classList.toggle("aktif", b.dataset.tab === t));
     document.querySelectorAll(".tab").forEach(s => s.classList.toggle("aktif", s.id === "tab-" + t));
-    if (t === "master") Master.muatInstansi(), Master.muatKelas(); else if (t === "riwayat") Riwayat.muat(); else if (t === "ekspor") Ekspor.muat(); else Dash.muat();
+    if (t === "master") Master.muatInstansi(), Master.muatKelas(); else if (t === "riwayat")Riwayat.muat(); else if (t === "ekspor") Ekspor.muat(); else Dash.muat();
     pasangHandler();
 }
 function pilihSub(s) {
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("c-kelas").onchange = () => Master.muatKartu();
     document.getElementById("k-semua").onchange = () => Master.muatKelas();
     document.getElementById("btn-uid-manual").onclick = () => {
-        Dash.bukaModal(`<h2>Input UID manual</h2><input id="um" maxlength="12" placeholder="UID"><div class="galat"></div>
+        Dash.bukaModal(`<h2>Input UID manual</h2><p>Ketik UID kartu bila reader tidak tersedia.</p><input id="um" maxlength="12" placeholder="UID"><div class="galat"></div>
       <div class="aksi"><button id="um-batal">Batal</button><button id="um-ok">Proses</button></div>`);
         const i = document.getElementById("um"); i.focus();
         const ok = () => { const u = i.value; Dash.tutupModal(); prosesTap(u); };
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("sim-kirim").onclick = () => prosesTap(val("sim-uid"));
     document.getElementById("sim-hid").onclick = () => simulasiHID(val("sim-uid"));
 
-    try { const p = await API.GetPengaturan(); Tap.ambangMs = p.hid_ambang_ms; } catch (e) { }
+    try { const p = await API.GetPengaturan(); Tap.ambangMs = p.hid_ambang_ms; } catch (e) {}
     pasangHandler();
     Dash.muat();
     setInterval(() => { if (tabAktif === "beranda" && document.getElementById("modal").className === "hidden") Dash.muat(); }, 30000);
@@ -54,8 +54,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 function tampilStatusReader(st) {
     const el = document.getElementById("status-reader");
     if (!el) return;
-    el.textContent = st && st.terhubung ? "Reader serial terhubung (" + st.port + ")" : "Reader serial terputus";
-    el.style.color = st && st.terhubung ? "#15803d" : "#b91c1c";
+    const ok = !!(st && st.terhubung);
+    el.className = "pil-status " + (ok ? "ok" : "putus");
+    el.querySelector(".teks").textContent = ok ? "Reader serial terhubung (" + st.port + ")" : "Reader serial terputus";
+    el.title = ok ? "Reader serial siap menerima tap" : "Reader serial tidak terhubung. Reader HID (keyboard) tetap bisa dipakai.";
 }
 document.addEventListener("DOMContentLoaded", () => {
     if (window.runtime && window.runtime.EventsOn) {

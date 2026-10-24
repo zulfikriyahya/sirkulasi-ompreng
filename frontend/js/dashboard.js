@@ -1,3 +1,20 @@
+const LABEL_STATUS = {
+  BELUM_AMBIL: "Belum ambil",
+  AMBIL: "Sudah ambil",
+  KURANG: "Kurang",
+  SELESAI: "Selesai",
+  BELUM_KEMBALI: "Belum kembali",
+  TIDAK_AMBIL: "Tidak mengambil",
+};
+
+// Lencana status berwarna; dipakai juga oleh riwayat.js.
+function lencana(status) {
+  const s = document.createElement("span");
+  s.className = "lencana " + String(status).toLowerCase().replace(/_/g, "-");
+  s.textContent = LABEL_STATUS[status] || status;
+  return s;
+}
+
 const Dash = {
   async muat() {
     const st = await API.StatusHariIni();
@@ -5,40 +22,52 @@ const Dash = {
       st.tanggal_indo + (st.ditutup ? " (DITUTUP)" : "");
     const tb = document.querySelector("#tabel-hari tbody");
     tb.innerHTML = "";
-    const label = {
-      BELUM_AMBIL: "Belum ambil",
-      AMBIL: "Sudah ambil",
-      KURANG: "Kurang",
-      SELESAI: "Selesai",
-      BELUM_KEMBALI: "Belum kembali",
-      TIDAK_AMBIL: "Tidak mengambil",
+    const hit = { total: st.baris.length, selesai: 0, ambil: 0, kurang: 0, belum: 0 };
+    const v = (x) => (x === null || x === undefined ? "-" : x);
+    const sel = (teks, kelas) => {
+      const td = document.createElement("td");
+      if (kelas) td.className = kelas;
+      td.textContent = teks;
+      return td;
     };
-    let selesai = 0;
     st.baris.forEach((b, i) => {
-      if (b.status === "SELESAI") selesai++;
+      if (b.status === "SELESAI") hit.selesai++;
+      else if (b.status === "AMBIL") hit.ambil++;
+      else if (b.status === "KURANG" || b.status === "BELUM_KEMBALI") hit.kurang++;
+      else if (b.status === "BELUM_AMBIL") hit.belum++;
       const tr = document.createElement("tr");
       if (b.merah) tr.className = "merah";
       else if (b.status === "SELESAI") tr.className = "selesai";
-      const v = (x) => (x === null || x === undefined ? "-" : x);
-      [
-        i + 1,
-        b.nama,
-        b.nama_ketua,
-        label[b.status] || b.status,
-        v(b.jumlah_ambil),
-        v(b.jumlah_kembali),
-        b.waktu_ambil || "-",
-        b.waktu_kembali || "-",
-        b.keterangan,
-      ].forEach((t) => {
-        const td = document.createElement("td");
-        td.textContent = t;
-        tr.appendChild(td);
-      });
+      const tdStatus = document.createElement("td");
+      tdStatus.appendChild(lencana(b.status));
+      tr.append(
+        sel(i + 1, "num"),
+        sel(b.nama),
+        sel(b.nama_ketua),
+        tdStatus,
+        sel(v(b.jumlah_ambil), "num"),
+        sel(v(b.jumlah_kembali), "num"),
+        sel(b.waktu_ambil || "-", "waktu"),
+        sel(b.waktu_kembali || "-", "waktu"),
+        sel(b.keterangan)
+      );
       tb.appendChild(tr);
     });
+    if (!st.baris.length)
+      tb.innerHTML =
+        '<tr><td colspan="9">Belum ada kelas. Tambahkan di Master Data &gt; Kelas &amp; Ketua.</td></tr>';
+
+    const persen = hit.total ? Math.round((hit.selesai * 100) / hit.total) : 0;
     document.getElementById("ringkasan").textContent =
-      `${selesai} dari ${st.baris.length} kelas selesai.`;
+      `${hit.selesai} dari ${hit.total} kelas selesai (${persen}%)`;
+    document.getElementById("progres-isi").style.width = persen + "%";
+    const kartu = (kelas, label, nilai, ket) =>
+      `<div class="stat ${kelas}"><div class="label">${label}</div><div class="nilai">${nilai}</div><div class="ket">${ket}</div></div>`;
+    document.getElementById("statistik").innerHTML =
+      kartu("", "Kelas", hit.total, `${hit.belum} belum mengambil`) +
+      kartu("biru", "Sudah ambil", hit.ambil, "menunggu pengembalian") +
+      kartu("hijau", "Selesai", hit.selesai, "dikembalikan lengkap") +
+      kartu(hit.kurang ? "merah" : "", "Kurang", hit.kurang, "perlu ditindaklanjuti");
     Dash.terapkanHari(st);
   },
 
@@ -58,19 +87,25 @@ const Dash = {
     const susulan = mode === "SUSULAN";
     const sudah = (r.jumlah_ambil || 0) - (r.sisa || 0);
     const judul = ambil ? "Pengambilan" : susulan ? "Pengembalian susulan" : "Pengembalian";
-    const info = ambil
+    const kelasMode = ambil ? "" : susulan ? "susulan" : "kembali";
+    const tiles = ambil
       ? ""
       : susulan
-        ? ` &middot; Diambil: <b>${r.jumlah_ambil}</b> &middot; Sudah kembali: <b>${sudah}</b> &middot; Sisa: <b>${r.sisa}</b>`
-        : ` &middot; Diambil: <b>${r.jumlah_ambil}</b> ompreng`;
+        ? `<div class="tiles"><div class="tile"><span>Diambil</span><b>${r.jumlah_ambil}</b></div><div class="tile"><span>Sudah kembali</span><b>${sudah}</b></div><div class="tile sisa"><span>Sisa</span><b>${r.sisa}</b></div></div>`
+        : `<div class="tiles"><div class="tile"><span>Diambil</span><b>${r.jumlah_ambil}</b></div></div>`;
     const min = ambil || susulan ? 1 : 0;
     const max = susulan ? r.sisa : r.jumlah_ambil;
     const nama = ambil ? "diambil" : susulan ? "susulan" : "dikembalikan";
     this.bukaModal(`
-      <h2>${judul} - ${esc(r.nama_kelas)}</h2>
-      <p>Ketua: ${esc(r.nama_ketua)}${info}</p>
-      <p>${ambil ? "Pengambil" : "Pengembali"}: <b>${esc(r.nama_siswa || "(kartu tanpa nama)")}</b>${r.nisn ? " &middot; NISN " + esc(r.nisn) : ""}</p>
-      <input id="in-jumlah" type="number" min="${min}" ${ambil ? "" : `max="${max}"`} placeholder="Jumlah ${nama}">
+      <span class="mode ${kelasMode}">${judul}</span>
+      <h2>${esc(r.nama_kelas)}</h2>
+      <p>Ketua: ${esc(r.nama_ketua)}</p>
+      ${tiles}
+      <div class="orang"><span class="peran">${ambil ? "Pengambil" : "Pengembali"}</span><b>${esc(r.nama_siswa || "(kartu tanpa nama)")}</b>${r.nisn ? `<span class="kecil">NISN ${esc(r.nisn)}</span>` : ""}</div>
+      <label>Jumlah ${nama}
+        <input id="in-jumlah" type="number" inputmode="numeric" autocomplete="off" min="${min}" ${ambil ? "" : `max="${max}"`} placeholder="Jumlah">
+      </label>
+      ${ambil ? "" : `<span class="kecil">Rentang ${min} sampai ${max}</span>`}
       <div class="galat" id="in-galat"></div>
       <div class="aksi"><button id="in-batal">Batal</button><button id="in-ok">Submit</button></div>`);
     const inp = document.getElementById("in-jumlah");
@@ -112,7 +147,8 @@ const Dash = {
 
   popupKonfirmasi(r) {
     this.bukaModal(`
-      <h2>Konfirmasi</h2>
+      <span class="mode konfirmasi">Konfirmasi</span>
+      <h2>${esc(r.nama_kelas)}</h2>
       <p>Kelas <b>${esc(r.nama_kelas)}</b> baru mengambil ${r.menit_sejak} menit lalu. Pengembali: <b>${esc(r.nama_siswa || "-")}</b>. Tetap proses pengembalian?</p>
       <div class="aksi"><button id="kf-tidak">Tidak</button><button id="kf-ya">Ya</button></div>`);
     document.getElementById("kf-tidak").onclick = async () => {
