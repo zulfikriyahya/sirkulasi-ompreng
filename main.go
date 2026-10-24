@@ -53,7 +53,7 @@ func main() {
 	)
 
 	err = wails.Run(&options.App{
-		Title:       "MBG - Pencatatan Ompreng",
+		Title:       "MBG - Makanan Bergizi Gratis",
 		Width:       1200,
 		Height:      800,
 		AssetServer: &assetserver.Options{Assets: assets},
