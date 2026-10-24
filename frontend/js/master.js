@@ -35,11 +35,29 @@ const Master = {
   async muatKelas() {
     const cb = document.getElementById("k-semua");
     const list = await API.ListKelas(true);
+    const wali = await API.ListWaliKelas(false);
     const tb = document.querySelector("#tabel-kelas tbody");
     tb.innerHTML = "";
     list.forEach((k) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${k.urutan}</td><td>${esc(k.nama)}</td><td>${esc(k.nama_ketua)}</td><td class="aksi-sel"><div class="aksi-baris"></div></td>`;
+      tr.innerHTML = `<td>${k.urutan}</td><td>${esc(k.nama)}</td><td>${esc(k.nama_ketua)}</td><td class="sel-wali"></td><td class="aksi-sel"><div class="aksi-baris"></div></td>`;
+      const sw = document.createElement("select");
+      sw.add(new Option("- belum ada -", 0));
+      wali.forEach((w) => sw.add(new Option(w.nama, w.id)));
+      sw.value = k.wali_kelas_id || 0;
+      sw.disabled = !k.aktif;
+      sw.onchange = async () => {
+        try {
+          await API.SetWaliKelas(k.id, parseInt(sw.value, 10));
+          k.wali_kelas_id = parseInt(sw.value, 10);
+          toast("Wali kelas disimpan", "ok");
+          this.muatWali();
+        } catch (e) {
+          sw.value = k.wali_kelas_id || 0;
+          toast(String(e.message || e), "err");
+        }
+      };
+      tr.querySelector(".sel-wali").appendChild(sw);
       const wadah = tr.querySelector(".aksi-baris");
       if (k.aktif) {
         const ub = document.createElement("button");
@@ -118,6 +136,86 @@ const Master = {
     }
   },
 
+  editWaliId: null,
+
+  async muatWali() {
+    const semua = document.getElementById("w-semua").checked;
+    const list = await API.ListWaliKelas(semua);
+    const tb = document.querySelector("#tabel-wali tbody");
+    tb.innerHTML = "";
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="4">Belum ada data wali kelas</td></tr>`;
+      return;
+    }
+    list.forEach((w) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${esc(w.nama)}</td><td>${esc(w.no_wa)}</td><td>${esc(w.daftar_kelas || "-")}</td><td class="aksi-sel"><div class="aksi-baris"></div></td>`;
+      const wadah = tr.querySelector(".aksi-baris");
+      if (w.aktif) {
+        const ub = document.createElement("button");
+        ub.textContent = "Ubah";
+        ub.onclick = () => {
+          this.editWaliId = w.id;
+          setv("w-nama", w.nama);
+          setv("w-wa", w.no_wa);
+          document.getElementById("w-simpan").textContent = "Simpan";
+          document.getElementById("w-batal").classList.remove("hidden");
+        };
+        const nb = document.createElement("button");
+        nb.textContent = "Nonaktifkan";
+        nb.className = "bahaya";
+        nb.onclick = async () => {
+          if (!confirm(`Nonaktifkan wali kelas ${w.nama}? Tautan ke kelasnya akan dilepas.`))
+            return;
+          try {
+            await API.NonaktifkanWaliKelas(w.id, "dari layar master");
+            this.muatWali();
+            this.muatKelas();
+          } catch (e) {
+            toast(String(e.message || e), "err");
+          }
+        };
+        wadah.append(ub, nb);
+      } else {
+        tr.style.opacity = "0.55";
+        const ab = document.createElement("button");
+        ab.textContent = "Aktifkan";
+        ab.onclick = async () => {
+          try {
+            await API.AktifkanWaliKelas(w.id, "dari layar master");
+            this.muatWali();
+            this.muatKelas();
+          } catch (e) {
+            toast(String(e.message || e), "err");
+          }
+        };
+        wadah.append(ab);
+      }
+      tb.appendChild(tr);
+    });
+  },
+  resetFormWali() {
+    this.editWaliId = null;
+    setv("w-nama", "");
+    setv("w-wa", "");
+    document.getElementById("w-simpan").textContent = "Tambah";
+    document.getElementById("w-batal").classList.add("hidden");
+  },
+  async simpanWali() {
+    try {
+      const n = val("w-nama"),
+        wa = val("w-wa");
+      if (this.editWaliId) await API.UbahWaliKelas(this.editWaliId, n, wa);
+      else await API.TambahWaliKelas(n, wa);
+      this.resetFormWali();
+      toast("Wali kelas tersimpan", "ok");
+      this.muatWali();
+      this.muatKelas();
+    } catch (e) {
+      toast(String(e.message || e), "err");
+    }
+  },
+
   async muatKartu() {
     const kid = parseInt(val("c-kelas"), 10);
     const tb = document.querySelector("#tabel-kartu tbody");
@@ -150,6 +248,8 @@ const Master = {
       setv("c-uid", "");
       setv("c-nisn", "");
       setv("c-nama", "");
+      toast("Kartu didaftarkan", "ok");
+      this.muatKartu();
     } catch (e) {
       toast(String(e.message || e), "err");
     }

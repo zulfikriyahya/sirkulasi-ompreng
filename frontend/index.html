@@ -130,6 +130,7 @@
                     <div class="subnav">
                         <button data-sub="instansi" class="aktif">Pengaturan</button>
                         <button data-sub="kelas">Kelas</button>
+                        <button data-sub="wali">Wali Kelas</button>
                         <button data-sub="kartu">Kartu RFID</button>
                     </div>
 
@@ -218,6 +219,7 @@
                                         <button id="sk-xlsx" class="utama">Ekspor Master (Excel)</button>
                                         <button id="sk-csv-kelas">Ekspor Kelas (CSV)</button>
                                         <button id="sk-csv-kartu">Ekspor Kartu (CSV)</button>
+                                        <button id="sk-csv-wali">Ekspor Wali (CSV)</button>
                                     </div>
                                 </div>
                             </div>
@@ -233,6 +235,7 @@
                                         <button id="sk-tpl-xlsx">Template Excel</button>
                                         <button id="sk-tpl-kelas">Template CSV Kelas</button>
                                         <button id="sk-tpl-kartu">Template CSV Kartu</button>
+                                        <button id="sk-tpl-wali">Template CSV Wali</button>
                                     </div>
                                 </div>
                             </div>
@@ -345,6 +348,7 @@
                                             <th class="num">Urutan</th>
                                             <th>Kelas</th>
                                             <th>Ketua</th>
+                                            <th>Wali Kelas</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -354,56 +358,40 @@
                         </div>
                     </div>
 
-                    <!-- <div id="sub-sinkron" class="sub">
-                        <div class="peringatan"><b>Data pribadi.</b> Berkas ekspor kartu berisi NISN dan nama siswa.
-                            Simpan di
-                            lokasi aman, jangan di folder repositori atau rilis publik, dan hapus setelah dipakai.
-                        </div>
+                    <div id="sub-wali" class="sub">
                         <div class="panel">
                             <div class="panel-kepala">
-                                <h3>Ekspor data master</h3>
+                                <h3>Tambah atau ubah wali kelas</h3>
                             </div>
-                            <div class="panel-badan">
-                                <p class="deskripsi">Simpan pengaturan instansi, kelas, dan kartu untuk dipindah ke
-                                    komputer
-                                    lain.</p>
-                                <div class="baris-aksi">
-                                    <button id="sk-xlsx" class="utama">Ekspor Master (Excel)</button>
-                                    <button id="sk-csv-kelas">Ekspor Kelas (CSV)</button>
-                                    <button id="sk-csv-kartu">Ekspor Kartu (CSV)</button>
-                                </div>
+                            <div class="panel-badan toolbar">
+                                <label class="field grow"><span>Nama wali kelas</span><input id="w-nama"
+                                        placeholder="Nama lengkap"></label>
+                                <label class="field grow"><span>Nomor WhatsApp</span><input id="w-wa"
+                                        placeholder="mis. 081234567890" inputmode="tel"></label>
+                                <button id="w-simpan" class="utama">Tambah</button>
+                                <button id="w-batal" class="hidden">Batal ubah</button>
                             </div>
                         </div>
-                        <div class="panel">
+                        <div class="panel potong">
                             <div class="panel-kepala">
-                                <h3>Template impor kosong</h3>
+                                <h3>Daftar wali kelas</h3>
+                                <label class="cek"><input type="checkbox" id="w-semua"> Tampilkan wali nonaktif</label>
                             </div>
-                            <div class="panel-badan">
-                                <p class="deskripsi">Unduh berkas kosong dengan kolom yang benar, isi, lalu impor.</p>
-                                <div class="baris-aksi">
-                                    <button id="sk-tpl-xlsx">Template Excel</button>
-                                    <button id="sk-tpl-kelas">Template CSV Kelas</button>
-                                    <button id="sk-tpl-kartu">Template CSV Kartu</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel">
-                            <div class="panel-kepala">
-                                <h3>Impor data master</h3>
-                            </div>
-                            <div class="panel-badan">
-                                <div class="baris-aksi"><button id="sk-impor" class="utama">Impor Master...</button>
-                                </div>
-                                <p class="kecil" style="margin:12px 0 0">Impor selalu menampilkan pratinjau dulu dan
-                                    tidak
-                                    menulis apa pun sebelum Anda menekan Terapkan. CSV yang dibuka lalu disimpan ulang
-                                    di Excel
-                                    bisa kehilangan nol di depan; UID tetap dinormalkan saat impor, tetapi NISN pendek
-                                    akan
-                                    diberi peringatan. Logo, port serial, dan ambang HID tidak ikut disinkronkan.</p>
+                            <div class="tabel-gulir">
+                                <table id="tabel-wali">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama</th>
+                                            <th>WhatsApp</th>
+                                            <th>Kelas diampu</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
                             </div>
                         </div>
-                    </div> -->
+                    </div>
 
                     <div id="sub-kartu" class="sub">
                         <div class="panel">
@@ -513,6 +501,7 @@
                                         <option>master</option>
                                         <option>aplikasi</option>
                                         <option>hari</option>
+                                        <option>wali_kelas</option>
                                     </select></label>
                                 <button id="ra-cari" class="utama">Tampilkan</button>
                             </div>
@@ -582,7 +571,7 @@
 
             <footer>
                 built with <span class="hati">&#9829;</span> by
-                <a href="https://zulfikriyahya.my.id" id="link-footer">    Yahya Zulfikri</a>
+                <a href="https://zulfikriyahya.my.id" id="link-footer"> Yahya Zulfikri</a>
             </footer>
         </div><!-- /.konten -->
     </div><!-- /.aplikasi -->

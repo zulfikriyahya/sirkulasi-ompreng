@@ -9,7 +9,7 @@ function pilihTab(t) {
   document
     .querySelectorAll(".tab")
     .forEach((s) => s.classList.toggle("aktif", s.id === "tab-" + t));
-  if (t === "master") (Master.muatInstansi(), Master.muatKelas());
+  if (t === "master") (Master.muatInstansi(), Master.muatWali(), Master.muatKelas());
   else if (t === "riwayat") Riwayat.muat();
   else if (t === "ekspor") Ekspor.muat();
   else Dash.muat();
@@ -53,6 +53,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("c-daftar").onclick = () => Master.daftarKartu();
   document.getElementById("c-kelas").onchange = () => Master.muatKartu();
   document.getElementById("k-semua").onchange = () => Master.muatKelas();
+  document.getElementById("w-simpan").onclick = () => Master.simpanWali();
+  document.getElementById("w-batal").onclick = () => Master.resetFormWali();
+  document.getElementById("w-semua").onchange = () => Master.muatWali();
   document.getElementById("btn-uid-manual").onclick = () => {
     Dash.bukaModal(`<h2>Input UID manual</h2><p>Ketik UID kartu bila reader tidak tersedia.</p><input id="um" maxlength="12" placeholder="UID"><div class="galat"></div>
       <div class="aksi"><button id="um-batal">Batal</button><button id="um-ok">Proses</button></div>`);

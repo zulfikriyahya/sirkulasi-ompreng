@@ -151,7 +151,7 @@ Template pesan memungkinkan Anda menyusun format pesan WhatsApp sekali saja dan 
 
 ```
 ```bash
-curl -X POST https://whatsapp.mtsn1pandeglang.id/api/v1/messages \
+curl -X POST https://whatsapp.mtsn1pandeglang.sch.id/api/v1/messages \
   -H "X-API-Key: key_xxx" \
   -H "X-Signature: <hmac_sha256_dari_body>" \
   -H "X-Timestamp: 1751875200" \
@@ -165,7 +165,7 @@ curl -X POST https://whatsapp.mtsn1pandeglang.id/api/v1/messages \
   }'
 
 # Contoh cek status pengiriman:
-curl -X GET https://whatsapp.mtsn1pandeglang.id/api/v1/messages/job_xxx \
+curl -X GET https://whatsapp.mtsn1pandeglang.sch.id/api/v1/messages/job_xxx \
   -H "X-API-Key: key_xxx" \
   -H "X-Signature: <hmac_sha256_dari_body_kosong>" \
   -H "X-Timestamp: 1751875200"

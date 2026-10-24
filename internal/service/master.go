@@ -49,11 +49,12 @@ func (s *Service) SimpanPengaturan(p model.Pengaturan) error {
 // ---------- Kelas ----------
 
 func (s *Service) ListKelas(termasukNonaktif bool) ([]model.Kelas, error) {
-	q := `SELECT id,nama,nama_ketua,urutan,aktif FROM kelas`
+	q := `SELECT k.id,k.nama,k.nama_ketua,k.urutan,k.aktif,COALESCE(k.wali_kelas_id,0),COALESCE(w.nama,'')
+                FROM kelas k LEFT JOIN wali_kelas w ON w.id=k.wali_kelas_id`
 	if !termasukNonaktif {
-		q += ` WHERE aktif=1`
+		q += ` WHERE k.aktif=1`
 	}
-	q += ` ORDER BY urutan,nama`
+	q += ` ORDER BY k.urutan,k.nama`
 	rows, err := s.db.Query(q)
 	if err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (s *Service) ListKelas(termasukNonaktif bool) ([]model.Kelas, error) {
 	for rows.Next() {
 		var k model.Kelas
 		var a int
-		if err := rows.Scan(&k.ID, &k.Nama, &k.NamaKetua, &k.Urutan, &a); err != nil {
+		if err := rows.Scan(&k.ID, &k.Nama, &k.NamaKetua, &k.Urutan, &a, &k.WaliKelasID, &k.NamaWali); err != nil {
 			return nil, err
 		}
 		k.Aktif = a == 1

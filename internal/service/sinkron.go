@@ -32,21 +32,39 @@ type kelasLama struct {
 	ketua  string
 	urutan int
 	aktif  bool
+	wali   string // no_wa wali saat ini, "" = tidak ada
+}
+
+type waliLama struct {
+	id    int64
+	nama  string
+	aktif bool
+}
+
+type waliRencana struct {
+	baris int
+	noWA  string
+	nama  string
+	aktif bool
+	aksi  string // BARU | UBAH | SAMA | NONAKTIF
+	lama  *waliLama
+}
+
+type kelasRencana struct {
+	baris   int
+	nama    string
+	ketua   string
+	urutan  int
+	aktif   bool
+	wali    string // no_wa
+	adaWali bool   // true = tautan wali ikut diatur dari berkas
+	aksi    string // BARU | UBAH | SAMA | OTOMATIS | NONAKTIF
+	lama    *kelasLama
 }
 
 type kartuLama struct {
 	kelas, nisn, nama string
 	aktif             bool
-}
-
-type kelasRencana struct {
-	baris  int
-	nama   string
-	ketua  string
-	urutan int
-	aktif  bool
-	aksi   string // BARU | UBAH | SAMA | OTOMATIS | NONAKTIF
-	lama   *kelasLama
 }
 
 type kartuRencana struct {
@@ -58,6 +76,7 @@ type kartuRencana struct {
 }
 
 type rencanaImpor struct {
+	wali           []waliRencana
 	kelas          []kelasRencana
 	kartu          []kartuRencana
 	pengaturan     map[string]string // hanya kunci yang berubah
@@ -69,7 +88,8 @@ type rencanaImpor struct {
 func (rc *rencanaImpor) perubahan() int {
 	r := rc.r
 	return r.KelasBaru + r.KelasUbah + r.KelasNonaktif + r.KelasOtomatis +
-		r.KartuBaru + r.KartuUbah + r.KartuHapus + r.PengaturanUbah
+		r.KartuBaru + r.KartuUbah + r.KartuHapus + r.PengaturanUbah +
+		r.WaliBaru + r.WaliUbah + r.WaliNonaktif
 }
 
 // hitungHash: sidik jari berkas + opsi + rencana. Dicek ulang di dalam transaksi saat menerapkan,
@@ -158,7 +178,8 @@ func bacaPengaturan(q pembaca) (model.Pengaturan, error) {
 }
 
 func muatKelasLama(q pembaca) (map[string]*kelasLama, error) {
-	rows, err := q.Query(`SELECT id,nama,nama_ketua,urutan,aktif FROM kelas`)
+	rows, err := q.Query(`SELECT k.id,k.nama,k.nama_ketua,k.urutan,k.aktif,COALESCE(w.no_wa,'')
+                FROM kelas k LEFT JOIN wali_kelas w ON w.id=k.wali_kelas_id`)
 	if err != nil {
 		return nil, err
 	}
@@ -166,12 +187,33 @@ func muatKelasLama(q pembaca) (map[string]*kelasLama, error) {
 	out := map[string]*kelasLama{}
 	for rows.Next() {
 		var id int64
-		var nama, ketua string
+		var nama, ketua, wali string
 		var urutan, aktif int
-		if err := rows.Scan(&id, &nama, &ketua, &urutan, &aktif); err != nil {
+		if err := rows.Scan(&id, &nama, &ketua, &urutan, &aktif, &wali); err != nil {
 			return nil, err
 		}
-		out[nama] = &kelasLama{id: id, ketua: ketua, urutan: urutan, aktif: aktif == 1}
+		out[nama] = &kelasLama{id: id, ketua: ketua, urutan: urutan, aktif: aktif == 1, wali: wali}
+	}
+	return out, rows.Err()
+}
+
+func muatWaliLama(q pembaca) (map[string]*waliLama, error) {
+	rows, err := q.Query(`SELECT id,nama,no_wa,aktif FROM wali_kelas ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]*waliLama{}
+	for rows.Next() {
+		var id int64
+		var nama, no string
+		var aktif int
+		if err := rows.Scan(&id, &nama, &no, &aktif); err != nil {
+			return nil, err
+		}
+		if _, ada := out[no]; !ada { // nomor ganda di DB: pakai yang pertama
+			out[no] = &waliLama{id: id, nama: nama, aktif: aktif == 1}
+		}
 	}
 	return out, rows.Err()
 }
@@ -227,6 +269,10 @@ func (s *Service) rencanakan(q pembaca, d sinkron.Data, o model.OpsiImpor) (*ren
 	if err != nil {
 		return nil, err
 	}
+	waliDB, err := muatWaliLama(q)
+	if err != nil {
+		return nil, err
+	}
 
 	// --- pengaturan ---
 	if d.Pengaturan != nil {
@@ -274,6 +320,77 @@ func (s *Service) rencanakan(q pembaca, d sinkron.Data, o model.OpsiImpor) (*ren
 		}
 	}
 
+	// --- wali kelas ---
+	waliBerkas := map[string]bool{}
+	waliAktif := map[string]bool{} // status akhir setelah impor; ada = dikenal
+	for no, w := range waliDB {
+		waliAktif[no] = w.aktif
+	}
+	if d.AdaWali {
+		if o.Mode == "GANTI" && len(d.Wali) == 0 {
+			catat("wali", 0, "-", "PERINGATAN", "Berkas tanpa baris wali: mode Ganti akan menonaktifkan semua wali kelas")
+		}
+		for _, b := range d.Wali {
+			nama := strings.TrimSpace(b.Nama)
+			if nama == "" {
+				catat("wali", b.Baris, "-", "GALAT", "Nama wali kosong")
+				continue
+			}
+			no, ok := NormalisasiWA(b.NoWA)
+			if !ok {
+				catat("wali", b.Baris, strings.TrimSpace(b.NoWA), "GALAT", "Nomor WhatsApp tidak valid")
+				continue
+			}
+			if waliBerkas[no] {
+				catat("wali", b.Baris, no, "GALAT", "Nomor WhatsApp ganda dalam berkas")
+				continue
+			}
+			aktif, ok := parseAktif(b.Aktif)
+			if !ok {
+				catat("wali", b.Baris, no, "GALAT", "Kolom aktif harus 1 atau 0")
+				continue
+			}
+			waliBerkas[no] = true
+			waliAktif[no] = aktif
+			wr := waliRencana{baris: b.Baris, noWA: no, nama: nama, aktif: aktif}
+			if lama, ada := waliDB[no]; ada {
+				wr.lama = lama
+				if lama.nama == nama && lama.aktif == aktif {
+					wr.aksi = "SAMA"
+					rc.r.WaliSama++
+				} else {
+					wr.aksi = "UBAH"
+					rc.r.WaliUbah++
+					pesan := "Data wali diperbarui"
+					if lama.aktif && !aktif {
+						pesan = "Wali dinonaktifkan: tautan ke kelas dilepas"
+					}
+					catat("wali", b.Baris, no, "UBAH", pesan)
+				}
+			} else {
+				wr.aksi = "BARU"
+				rc.r.WaliBaru++
+				catat("wali", b.Baris, no, "BARU", "Wali baru: "+nama)
+			}
+			rc.wali = append(rc.wali, wr)
+		}
+		if o.Mode == "GANTI" {
+			var nomor []string
+			for no, w := range waliDB {
+				if w.aktif && !waliBerkas[no] {
+					nomor = append(nomor, no)
+				}
+			}
+			sort.Strings(nomor)
+			for _, no := range nomor {
+				waliAktif[no] = false
+				rc.wali = append(rc.wali, waliRencana{noWA: no, aksi: "NONAKTIF", lama: waliDB[no]})
+				rc.r.WaliNonaktif++
+				catat("wali", 0, no, "NONAKTIF", "Tidak ada di berkas: wali dinonaktifkan, tautan kelas dilepas")
+			}
+		}
+	}
+
 	// --- kelas ---
 	dalamBerkas := map[string]bool{}
 	otomatis := map[string]bool{}
@@ -312,10 +429,30 @@ func (s *Service) rencanakan(q pembaca, d sinkron.Data, o model.OpsiImpor) (*ren
 				catat("kelas", b.Baris, nama, "GALAT", "Kolom aktif harus 1 atau 0")
 				continue
 			}
-			kr := kelasRencana{baris: b.Baris, nama: nama, ketua: ketua, urutan: urutan, aktif: aktif}
+			wali := ""
+			if b.AdaWali {
+				if w := strings.TrimSpace(b.Wali); w != "" {
+					no, ok := NormalisasiWA(w)
+					if !ok {
+						catat("kelas", b.Baris, nama, "GALAT", "Nomor WhatsApp wali tidak valid")
+						continue
+					}
+					akt, kenal := waliAktif[no]
+					if !kenal {
+						catat("kelas", b.Baris, nama, "GALAT", "Wali "+no+" tidak dikenal (tambahkan di sheet Wali)")
+						continue
+					}
+					if !akt {
+						catat("kelas", b.Baris, nama, "GALAT", "Wali "+no+" nonaktif")
+						continue
+					}
+					wali = no
+				}
+			}
+			kr := kelasRencana{baris: b.Baris, nama: nama, ketua: ketua, urutan: urutan, aktif: aktif, wali: wali, adaWali: b.AdaWali}
 			if lama, ada := kelasDB[nama]; ada {
 				kr.lama = lama
-				if lama.ketua == ketua && lama.urutan == urutan && lama.aktif == aktif {
+				if lama.ketua == ketua && lama.urutan == urutan && lama.aktif == aktif && (!b.AdaWali || lama.wali == wali) {
 					kr.aksi = "SAMA"
 					rc.r.KelasSama++
 				} else {
@@ -549,28 +686,100 @@ func (s *Service) TerapkanImpor(path string, o model.OpsiImpor) (model.HasilImpo
 		}
 	}
 
+	// wali kelas
+	lepasTautan := func(id int64) error {
+		_, err := tx.Exec(`UPDATE kelas SET wali_kelas_id=NULL WHERE wali_kelas_id=?`, id)
+		return err
+	}
+	for _, w := range rc.wali {
+		switch w.aksi {
+		case "BARU":
+			res, err := tx.Exec(`INSERT INTO wali_kelas (nama,no_wa,aktif) VALUES (?,?,?)`, w.nama, w.noWA, boolInt(w.aktif))
+			if err != nil {
+				return out, err
+			}
+			id, _ := res.LastInsertId()
+			if err := s.audit(tx, now, "TAMBAH", "wali_kelas", itoa(id), nil,
+				map[string]any{"nama": w.nama, "no_wa": w.noWA, "aktif": w.aktif}, alasan); err != nil {
+				return out, err
+			}
+		case "UBAH":
+			if !w.aktif {
+				if err := lepasTautan(w.lama.id); err != nil {
+					return out, err
+				}
+			}
+			if _, err := tx.Exec(`UPDATE wali_kelas SET nama=?,aktif=? WHERE id=?`, w.nama, boolInt(w.aktif), w.lama.id); err != nil {
+				return out, err
+			}
+			if err := s.audit(tx, now, "UBAH", "wali_kelas", itoa(w.lama.id),
+				map[string]any{"nama": w.lama.nama, "no_wa": w.noWA, "aktif": w.lama.aktif},
+				map[string]any{"nama": w.nama, "no_wa": w.noWA, "aktif": w.aktif}, alasan); err != nil {
+				return out, err
+			}
+		case "NONAKTIF":
+			if err := lepasTautan(w.lama.id); err != nil {
+				return out, err
+			}
+			if _, err := tx.Exec(`UPDATE wali_kelas SET aktif=0 WHERE id=?`, w.lama.id); err != nil {
+				return out, err
+			}
+			if err := s.audit(tx, now, "UBAH", "wali_kelas", itoa(w.lama.id),
+				map[string]any{"aktif": 1}, map[string]any{"aktif": 0}, alasan); err != nil {
+				return out, err
+			}
+		}
+	}
+	idWali := func(no string) (any, error) {
+		if no == "" {
+			return nil, nil
+		}
+		var id int64
+		if err := tx.QueryRow(`SELECT id FROM wali_kelas WHERE no_wa=? ORDER BY id LIMIT 1`, no).Scan(&id); err != nil {
+			return nil, fmt.Errorf("Wali %q tidak ditemukan", no)
+		}
+		return id, nil
+	}
+
 	// kelas
 	for _, k := range rc.kelas {
 		switch k.aksi {
 		case "BARU", "OTOMATIS":
-			res, err := tx.Exec(`INSERT INTO kelas (nama,nama_ketua,urutan,aktif) VALUES (?,?,?,?)`,
-				k.nama, k.ketua, k.urutan, boolInt(k.aktif))
+			wid, err := idWali(k.wali)
+			if err != nil {
+				return out, err
+			}
+			res, err := tx.Exec(`INSERT INTO kelas (nama,nama_ketua,urutan,aktif,wali_kelas_id) VALUES (?,?,?,?,?)`,
+				k.nama, k.ketua, k.urutan, boolInt(k.aktif), wid)
 			if err != nil {
 				return out, err
 			}
 			id, _ := res.LastInsertId()
 			if err := s.audit(tx, now, "TAMBAH", "kelas", itoa(id), nil,
-				map[string]any{"nama": k.nama, "ketua": k.ketua, "urutan": k.urutan, "aktif": k.aktif}, alasan); err != nil {
+				map[string]any{"nama": k.nama, "ketua": k.ketua, "urutan": k.urutan, "aktif": k.aktif, "wali": k.wali}, alasan); err != nil {
 				return out, err
 			}
 		case "UBAH":
-			if _, err := tx.Exec(`UPDATE kelas SET nama_ketua=?,urutan=?,aktif=? WHERE id=?`,
-				k.ketua, k.urutan, boolInt(k.aktif), k.lama.id); err != nil {
+			q := `UPDATE kelas SET nama_ketua=?,urutan=?,aktif=?`
+			args := []any{k.ketua, k.urutan, boolInt(k.aktif)}
+			baruWali := k.lama.wali
+			if k.adaWali {
+				wid, err := idWali(k.wali)
+				if err != nil {
+					return out, err
+				}
+				q += `,wali_kelas_id=?`
+				args = append(args, wid)
+				baruWali = k.wali
+			}
+			q += ` WHERE id=?`
+			args = append(args, k.lama.id)
+			if _, err := tx.Exec(q, args...); err != nil {
 				return out, err
 			}
 			if err := s.audit(tx, now, "UBAH", "kelas", itoa(k.lama.id),
-				map[string]any{"nama": k.nama, "ketua": k.lama.ketua, "urutan": k.lama.urutan, "aktif": k.lama.aktif},
-				map[string]any{"nama": k.nama, "ketua": k.ketua, "urutan": k.urutan, "aktif": k.aktif}, alasan); err != nil {
+				map[string]any{"nama": k.nama, "ketua": k.lama.ketua, "urutan": k.lama.urutan, "aktif": k.lama.aktif, "wali": k.lama.wali},
+				map[string]any{"nama": k.nama, "ketua": k.ketua, "urutan": k.urutan, "aktif": k.aktif, "wali": baruWali}, alasan); err != nil {
 				return out, err
 			}
 		case "NONAKTIF":
@@ -640,7 +849,8 @@ func (s *Service) TerapkanImpor(path string, o model.OpsiImpor) (model.HasilImpo
 		return out, err
 	}
 	r := rc.r
-	out.Pesan = fmt.Sprintf("Impor selesai: kelas %d baru, %d diubah, %d dinonaktifkan; kartu %d baru, %d diubah, %d dihapus; pengaturan %d diubah",
+	out.Pesan = fmt.Sprintf("Impor selesai: wali %d baru, %d diubah, %d dinonaktifkan; kelas %d baru, %d diubah, %d dinonaktifkan; kartu %d baru, %d diubah, %d dihapus; pengaturan %d diubah",
+		r.WaliBaru, r.WaliUbah, r.WaliNonaktif,
 		r.KelasBaru+r.KelasOtomatis, r.KelasUbah, r.KelasNonaktif, r.KartuBaru, r.KartuUbah, r.KartuHapus, r.PengaturanUbah)
 	return out, nil
 }
@@ -648,7 +858,7 @@ func (s *Service) TerapkanImpor(path string, o model.OpsiImpor) (model.HasilImpo
 // ---------- ekspor ----------
 
 func (s *Service) dataMaster(denganPengaturan bool) (sinkron.Data, error) {
-	d := sinkron.Data{AdaKelas: true, AdaKartu: true}
+	d := sinkron.Data{AdaKelas: true, AdaKartu: true, AdaWali: true}
 	if denganPengaturan {
 		p, err := s.GetPengaturan()
 		if err != nil {
@@ -661,18 +871,21 @@ func (s *Service) dataMaster(denganPengaturan bool) (sinkron.Data, error) {
 			"jeda_minimum_menit":       strconv.Itoa(p.JedaMinimumMenit),
 		}
 	}
-	kelas, err := s.db.Query(`SELECT nama,nama_ketua,urutan,aktif FROM kelas ORDER BY urutan,nama`)
+
+	kelas, err := s.db.Query(`SELECT k.nama,k.nama_ketua,k.urutan,k.aktif,COALESCE(w.no_wa,'')
+		FROM kelas k LEFT JOIN wali_kelas w ON w.id=k.wali_kelas_id ORDER BY k.urutan,k.nama`)
 	if err != nil {
 		return d, err
 	}
 	for kelas.Next() {
-		var nama, ketua string
+		var nama, ketua, wali string
 		var urutan, aktif int
-		if err := kelas.Scan(&nama, &ketua, &urutan, &aktif); err != nil {
+		if err := kelas.Scan(&nama, &ketua, &urutan, &aktif, &wali); err != nil {
 			kelas.Close()
 			return d, err
 		}
-		d.Kelas = append(d.Kelas, sinkron.KelasBaris{Nama: nama, Ketua: ketua, Urutan: strconv.Itoa(urutan), Aktif: strconv.Itoa(aktif)})
+		d.Kelas = append(d.Kelas, sinkron.KelasBaris{Nama: nama, Ketua: ketua, Urutan: strconv.Itoa(urutan),
+			Aktif: strconv.Itoa(aktif), Wali: wali})
 	}
 	if err := kelas.Err(); err != nil {
 		kelas.Close()
@@ -696,7 +909,24 @@ func (s *Service) dataMaster(denganPengaturan bool) (sinkron.Data, error) {
 	}
 	err = kartu.Err()
 	kartu.Close()
-	return d, err
+	if err != nil {
+		return d, err
+	}
+
+	wali, err := s.db.Query(`SELECT nama,no_wa,aktif FROM wali_kelas ORDER BY nama`)
+	if err != nil {
+		return d, err
+	}
+	defer wali.Close()
+	for wali.Next() {
+		var nama, no string
+		var aktif int
+		if err := wali.Scan(&nama, &no, &aktif); err != nil {
+			return d, err
+		}
+		d.Wali = append(d.Wali, sinkron.WaliBaris{Nama: nama, NoWA: no, Aktif: strconv.Itoa(aktif)})
+	}
+	return d, wali.Err()
 }
 
 func folderAwal() string {
@@ -773,10 +1003,10 @@ func (s *Service) EksporMasterExcel() (string, error) {
 	return p, nil
 }
 
-// EksporMasterCSV: jenis "kelas" atau "kartu".
+// EksporMasterCSV: jenis "kelas", "kartu", atau "wali".
 func (s *Service) EksporMasterCSV(jenis string) (string, error) {
-	if jenis != "kelas" && jenis != "kartu" {
-		return "", errors.New("Jenis data harus kelas atau kartu")
+	if jenis != "kelas" && jenis != "kartu" && jenis != "wali" {
+		return "", errors.New("Jenis data harus kelas, kartu, atau wali")
 	}
 	d, err := s.dataMaster(false)
 	if err != nil {
@@ -786,10 +1016,13 @@ func (s *Service) EksporMasterCSV(jenis string) (string, error) {
 	if err != nil || p == "" {
 		return "", err
 	}
-	if jenis == "kelas" {
+	switch jenis {
+	case "kelas":
 		err = sinkron.TulisCSVKelas(p, d)
-	} else {
+	case "kartu":
 		err = sinkron.TulisCSVKartu(p, d)
+	default:
+		err = sinkron.TulisCSVWali(p, d)
 	}
 	if err != nil {
 		return "", err
@@ -809,8 +1042,8 @@ func (s *Service) UnduhTemplateExcel() (string, error) {
 }
 
 func (s *Service) UnduhTemplateCSV(jenis string) (string, error) {
-	if jenis != "kelas" && jenis != "kartu" {
-		return "", errors.New("Jenis template harus kelas atau kartu")
+	if jenis != "kelas" && jenis != "kartu" && jenis != "wali" {
+		return "", errors.New("Jenis template harus kelas, kartu, atau wali")
 	}
 	p, err := s.pilihSimpan("Simpan template "+jenis, "template-"+jenis+".csv", "csv", "CSV (*.csv)", false)
 	if err != nil || p == "" {

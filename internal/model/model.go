@@ -1,11 +1,21 @@
 package model
 
 type Kelas struct {
-	ID        int64  `json:"id"`
-	Nama      string `json:"nama"`
-	NamaKetua string `json:"nama_ketua"`
-	Urutan    int    `json:"urutan"`
-	Aktif     bool   `json:"aktif"`
+	ID          int64  `json:"id"`
+	Nama        string `json:"nama"`
+	NamaKetua   string `json:"nama_ketua"`
+	Urutan      int    `json:"urutan"`
+	Aktif       bool   `json:"aktif"`
+	WaliKelasID int64  `json:"wali_kelas_id"` // 0 = belum ada
+	NamaWali    string `json:"nama_wali"`
+}
+
+type WaliKelas struct {
+	ID          int64  `json:"id"`
+	Nama        string `json:"nama"`
+	NoWA        string `json:"no_wa"` // format 62xxxxxxxxxx
+	Aktif       bool   `json:"aktif"`
+	DaftarKelas string `json:"daftar_kelas"` // kelas aktif yang diampu, dipisah koma
 }
 
 type Kartu struct {
@@ -160,6 +170,10 @@ type RingkasanImpor struct {
 	KartuUbah      int `json:"kartu_ubah"`
 	KartuSama      int `json:"kartu_sama"`
 	KartuHapus     int `json:"kartu_hapus"`
+	WaliBaru       int `json:"wali_baru"`
+	WaliUbah       int `json:"wali_ubah"`
+	WaliSama       int `json:"wali_sama"`
+	WaliNonaktif   int `json:"wali_nonaktif"`
 	PengaturanUbah int `json:"pengaturan_ubah"`
 	Galat          int `json:"galat"`
 	Peringatan     int `json:"peringatan"`

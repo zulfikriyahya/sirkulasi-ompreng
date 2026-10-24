@@ -55,12 +55,12 @@ const Sinkron = {
           <label>Mode
             <select id="im-mode">
               <option value="GABUNG">Gabung (tambah dan perbarui, tidak menghapus)</option>
-              <option value="GANTI">Ganti (hapus kartu / nonaktifkan kelas yang tidak ada di berkas)</option>
+<option value="GANTI">Ganti (hapus kartu / nonaktifkan kelas dan wali yang tidak ada di berkas)</option>
             </select>
           </label>
           <label class="cek"><input type="checkbox" id="im-otomatis"> Buat kelas otomatis bila kelas pada kartu belum ada</label>
           <div id="im-ganti" class="hidden">
-            <div class="peringatan">Mode Ganti menghapus kartu dan menonaktifkan kelas yang tidak ada di berkas.</div>
+<div class="peringatan">Mode Ganti menghapus kartu serta menonaktifkan kelas dan wali kelas yang tidak ada di berkas.</div>
             <label class="cek"><input type="checkbox" id="im-konfirm"> Saya paham dan ingin melanjutkan</label>
             <label>Alasan (wajib) <input id="im-alasan"></label>
           </div>
@@ -98,8 +98,12 @@ const Sinkron = {
       r.kartu_baru +
       r.kartu_ubah +
       r.kartu_hapus +
-      r.pengaturan_ubah;
+      r.pengaturan_ubah +
+      r.wali_baru +
+      r.wali_ubah +
+      r.wali_nonaktif;
     const ringkas = [
+      `Wali kelas: ${r.wali_baru} baru, ${r.wali_ubah} diubah, ${r.wali_nonaktif} dinonaktifkan, ${r.wali_sama} sama`,
       `Kelas: ${r.kelas_baru} baru, ${r.kelas_ubah} diubah, ${r.kelas_otomatis} dibuat otomatis, ${r.kelas_nonaktif} dinonaktifkan, ${r.kelas_sama} sama`,
       `Kartu: ${r.kartu_baru} baru, ${r.kartu_ubah} diubah, ${r.kartu_hapus} dihapus, ${r.kartu_sama} sama`,
       `Pengaturan: ${r.pengaturan_ubah} diubah`,
@@ -130,6 +134,7 @@ const Sinkron = {
       const h = await API.TerapkanImpor(this.path, this.opsi());
       this.tutup();
       toast(h.pesan, "ok");
+      Master.muatWali();
       Master.muatKelas();
       Dash.muat();
     } catch (e) {
@@ -143,8 +148,10 @@ document.addEventListener("DOMContentLoaded", () => {
   _r("sk-xlsx").onclick = () => Sinkron.unduh(() => API.EksporMasterExcel());
   _r("sk-csv-kelas").onclick = () => Sinkron.unduh(() => API.EksporMasterCSV("kelas"));
   _r("sk-csv-kartu").onclick = () => Sinkron.unduh(() => API.EksporMasterCSV("kartu"));
+  _r("sk-csv-wali").onclick = () => Sinkron.unduh(() => API.EksporMasterCSV("wali"));
   _r("sk-tpl-xlsx").onclick = () => Sinkron.unduh(() => API.UnduhTemplateExcel());
   _r("sk-tpl-kelas").onclick = () => Sinkron.unduh(() => API.UnduhTemplateCSV("kelas"));
+  _r("sk-tpl-wali").onclick = () => Sinkron.unduh(() => API.UnduhTemplateCSV("wali"));
   _r("sk-tpl-kartu").onclick = () => Sinkron.unduh(() => API.UnduhTemplateCSV("kartu"));
   _r("sk-impor").onclick = () => Sinkron.mulaiImpor();
 });

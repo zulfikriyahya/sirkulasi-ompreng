@@ -50,6 +50,7 @@ func Migrate(conn *sql.DB) error {
 		{"transaksi", "nisn_kembali", "TEXT"}, {"transaksi", "nama_kembali", "TEXT"},
 		{"pengaturan", "periksa_otomatis", "INTEGER NOT NULL DEFAULT 1"},
 		{"pengaturan", "pra_rilis", "INTEGER NOT NULL DEFAULT 0"},
+		{"kelas", "wali_kelas_id", "INTEGER REFERENCES wali_kelas(id)"},
 	} {
 		if err := tambahKolom(conn, k.tabel, k.kolom, k.tipe); err != nil {
 			return err
@@ -153,5 +154,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
   nilai_lama TEXT,
   nilai_baru TEXT,
   alasan TEXT
+);
+CREATE TABLE IF NOT EXISTS wali_kelas (
+  id INTEGER PRIMARY KEY,
+  nama TEXT NOT NULL,
+  no_wa TEXT NOT NULL,
+  aktif INTEGER NOT NULL DEFAULT 1
 );
 `

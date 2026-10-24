@@ -20,6 +20,7 @@ const (
 	SheetPengaturan = "Pengaturan"
 	SheetKelas      = "Kelas"
 	SheetKartu      = "Kartu"
+	SheetWali       = "Wali"
 	SheetPetunjuk   = "Petunjuk"
 	maksBerkas      = 5 << 20
 )
@@ -31,8 +32,9 @@ var KunciPengaturan = []string{
 }
 
 var (
-	headKelas = []string{"nama", "nama_ketua", "urutan", "aktif"}
+	headKelas = []string{"nama", "nama_ketua", "urutan", "aktif", "no_wa_wali"}
 	headKartu = []string{"uid", "kelas", "nisn", "nama_siswa", "aktif"}
+	headWali  = []string{"nama", "no_wa", "aktif"}
 )
 
 var PetunjukTemplate = []string{
@@ -43,11 +45,20 @@ var PetunjukTemplate = []string{
 	"Kolom sudah berformat TEKS agar angka nol di depan UID dan NISN tidak hilang. Jangan ubah formatnya menjadi angka.",
 	"Mode Gabung hanya menambah dan memperbarui. Mode Ganti juga menghapus kartu dan menonaktifkan kelas yang tidak ada di berkas.",
 	"Berkas berisi data pribadi siswa (NISN dan nama): jangan dimasukkan ke repositori atau dibagikan sembarangan.",
+	"Sheet Kelas juga punya kolom no_wa_wali (opsional): nomor WhatsApp wali kelas, harus ada di sheet Wali atau sudah terdaftar di aplikasi. Kosongkan untuk melepas wali.",
+	"Sheet Wali: nama (wajib), no_wa (wajib, kunci pencocokan; 08xx/62xx diterima), aktif (1/0, bawaan 1).",
 }
 
 type KelasBaris struct {
 	Baris                      int
 	Nama, Ketua, Urutan, Aktif string
+	Wali                       string // no_wa wali
+	AdaWali                    bool   // kolom no_wa_wali ada di berkas
+}
+
+type WaliBaris struct {
+	Baris             int
+	Nama, NoWA, Aktif string
 }
 
 type KartuBaris struct {
@@ -60,8 +71,10 @@ type Data struct {
 	Pengaturan map[string]string // nil = berkas tidak memuat pengaturan
 	AdaKelas   bool
 	AdaKartu   bool
+	AdaWali    bool
 	Kelas      []KelasBaris
 	Kartu      []KartuBaris
+	Wali       []WaliBaris
 }
 
 // ---------- Baca ----------
@@ -132,6 +145,7 @@ func parseKelas(rows [][]string) ([]KelasBaris, error) {
 	if err != nil {
 		return nil, err
 	}
+	_, adaWali := idx["no_wa_wali"]
 	var out []KelasBaris
 	for i := 1; i < len(rows); i++ {
 		if kosong(rows[i]) {
@@ -139,7 +153,25 @@ func parseKelas(rows [][]string) ([]KelasBaris, error) {
 		}
 		r := rows[i]
 		out = append(out, KelasBaris{Baris: i + 1, Nama: sel(r, idx, "nama"), Ketua: sel(r, idx, "nama_ketua"),
-			Urutan: sel(r, idx, "urutan"), Aktif: sel(r, idx, "aktif")})
+			Urutan: sel(r, idx, "urutan"), Aktif: sel(r, idx, "aktif"),
+			Wali: sel(r, idx, "no_wa_wali"), AdaWali: adaWali})
+	}
+	return out, nil
+}
+
+func parseWali(rows [][]string) ([]WaliBaris, error) {
+	idx, err := petakan(rows, SheetWali, []string{"nama", "no_wa"})
+	if err != nil {
+		return nil, err
+	}
+	var out []WaliBaris
+	for i := 1; i < len(rows); i++ {
+		if kosong(rows[i]) {
+			continue
+		}
+		r := rows[i]
+		out = append(out, WaliBaris{Baris: i + 1, Nama: sel(r, idx, "nama"),
+			NoWA: sel(r, idx, "no_wa"), Aktif: sel(r, idx, "aktif")})
 	}
 	return out, nil
 }
@@ -209,10 +241,16 @@ func bacaXLSX(raw []byte, d *Data) error {
 				return err
 			}
 			d.AdaKartu, d.Kartu = true, k
+		case "wali":
+			k, err := parseWali(rows)
+			if err != nil {
+				return err
+			}
+			d.AdaWali, d.Wali = true, k
 		}
 	}
-	if d.Pengaturan == nil && !d.AdaKelas && !d.AdaKartu {
-		return errors.New("Berkas tidak memuat sheet Pengaturan, Kelas, maupun Kartu")
+	if d.Pengaturan == nil && !d.AdaKelas && !d.AdaKartu && !d.AdaWali {
+		return errors.New("Berkas tidak memuat sheet Pengaturan, Kelas, Kartu, maupun Wali")
 	}
 	return nil
 }
@@ -255,8 +293,14 @@ func bacaCSV(raw []byte, d *Data) error {
 			return err
 		}
 		d.AdaKelas, d.Kelas = true, k
+	case head["no_wa"]:
+		k, err := parseWali(rows)
+		if err != nil {
+			return err
+		}
+		d.AdaWali, d.Wali = true, k
 	default:
-		return errors.New("Header CSV tidak dikenali: gunakan kolom kelas (nama, nama_ketua, urutan, aktif) atau kartu (uid, kelas, nisn, nama_siswa, aktif)")
+		return errors.New("Header CSV tidak dikenali: gunakan kolom kelas (nama, nama_ketua, urutan, aktif, no_wa_wali), kartu (uid, kelas, nisn, nama_siswa, aktif), atau wali (nama, no_wa, aktif)")
 	}
 	return nil
 }
@@ -266,7 +310,15 @@ func bacaCSV(raw []byte, d *Data) error {
 func (d Data) barisKelas() [][]string {
 	out := make([][]string, 0, len(d.Kelas))
 	for _, k := range d.Kelas {
-		out = append(out, []string{k.Nama, k.Ketua, k.Urutan, k.Aktif})
+		out = append(out, []string{k.Nama, k.Ketua, k.Urutan, k.Aktif, k.Wali})
+	}
+	return out
+}
+
+func (d Data) barisWali() [][]string {
+	out := make([][]string, 0, len(d.Wali))
+	for _, w := range d.Wali {
+		out = append(out, []string{w.Nama, w.NoWA, w.Aktif})
 	}
 	return out
 }
@@ -354,12 +406,17 @@ func TulisXLSX(path string, d Data, petunjuk []string) error {
 		}
 	}
 	if d.AdaKelas {
-		if err := tabel(SheetKelas, headKelas, d.barisKelas(), []float64{18, 30, 10, 8}); err != nil {
+		if err := tabel(SheetKelas, headKelas, d.barisKelas(), []float64{18, 30, 10, 8, 18}); err != nil {
 			return err
 		}
 	}
 	if d.AdaKartu {
 		if err := tabel(SheetKartu, headKartu, d.barisKartu(), []float64{16, 18, 16, 32, 8}); err != nil {
+			return err
+		}
+	}
+	if d.AdaWali {
+		if err := tabel(SheetWali, headWali, d.barisWali(), []float64{30, 18, 8}); err != nil {
 			return err
 		}
 	}
@@ -389,11 +446,10 @@ func tulisCSV(path string, head []string, rows [][]string) error {
 
 func TulisCSVKelas(path string, d Data) error { return tulisCSV(path, headKelas, d.barisKelas()) }
 func TulisCSVKartu(path string, d Data) error { return tulisCSV(path, headKartu, d.barisKartu()) }
+func TulisCSVWali(path string, d Data) error  { return tulisCSV(path, headWali, d.barisWali()) }
 
-// TemplateXLSX: petunjuk + sheet Kelas dan Kartu hanya berisi header (tanpa baris contoh,
-// supaya template yang diimpor apa adanya tidak menambah data palsu).
 func TemplateXLSX(path string) error {
-	return TulisXLSX(path, Data{AdaKelas: true, AdaKartu: true}, PetunjukTemplate)
+	return TulisXLSX(path, Data{AdaKelas: true, AdaKartu: true, AdaWali: true}, PetunjukTemplate)
 }
 
 func TemplateCSV(path, jenis string) error {
@@ -402,6 +458,8 @@ func TemplateCSV(path, jenis string) error {
 		return tulisCSV(path, headKelas, nil)
 	case "kartu":
 		return tulisCSV(path, headKartu, nil)
+	case "wali":
+		return tulisCSV(path, headWali, nil)
 	}
-	return errors.New("Jenis template harus kelas atau kartu")
+	return errors.New("Jenis template harus kelas, kartu, atau wali")
 }
