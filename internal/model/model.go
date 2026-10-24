@@ -130,3 +130,51 @@ type Audit struct {
 	NilaiBaru string `json:"nilai_baru"`
 	Alasan    string `json:"alasan"`
 }
+
+// ---------- Sinkronisasi master data ----------
+
+// OpsiImpor: Mode GABUNG (bawaan) atau GANTI. Hash diisi dari HasilPratinjau.Hash saat menerapkan.
+type OpsiImpor struct {
+	Mode              string `json:"mode"`
+	BuatKelasOtomatis bool   `json:"buat_kelas_otomatis"`
+	KonfirmasiGanti   bool   `json:"konfirmasi_ganti"`
+	Alasan            string `json:"alasan"`
+	Hash              string `json:"hash"`
+}
+
+type BarisPratinjau struct {
+	Entitas string `json:"entitas"` // kelas | kartu | pengaturan
+	Baris   int    `json:"baris"`   // nomor baris di berkas (0 = bukan dari baris berkas)
+	Kunci   string `json:"kunci"`
+	Aksi    string `json:"aksi"` // BARU | UBAH | HAPUS | NONAKTIF | OTOMATIS | GALAT | PERINGATAN
+	Pesan   string `json:"pesan"`
+}
+
+type RingkasanImpor struct {
+	KelasBaru      int `json:"kelas_baru"`
+	KelasUbah      int `json:"kelas_ubah"`
+	KelasSama      int `json:"kelas_sama"`
+	KelasNonaktif  int `json:"kelas_nonaktif"`
+	KelasOtomatis  int `json:"kelas_otomatis"`
+	KartuBaru      int `json:"kartu_baru"`
+	KartuUbah      int `json:"kartu_ubah"`
+	KartuSama      int `json:"kartu_sama"`
+	KartuHapus     int `json:"kartu_hapus"`
+	PengaturanUbah int `json:"pengaturan_ubah"`
+	Galat          int `json:"galat"`
+	Peringatan     int `json:"peringatan"`
+}
+
+type HasilPratinjau struct {
+	Berkas    string           `json:"berkas"`
+	Mode      string           `json:"mode"`
+	Ringkasan RingkasanImpor   `json:"ringkasan"`
+	Baris     []BarisPratinjau `json:"baris"`
+	Terpotong bool             `json:"terpotong"`
+	Hash      string           `json:"hash"`
+}
+
+type HasilImpor struct {
+	Ringkasan RingkasanImpor `json:"ringkasan"`
+	Pesan     string         `json:"pesan"`
+}

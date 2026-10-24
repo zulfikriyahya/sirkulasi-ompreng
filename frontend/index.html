@@ -66,6 +66,7 @@
                 <button data-sub="instansi" class="aktif">Instansi</button>
                 <button data-sub="kelas">Kelas &amp; Ketua</button>
                 <button data-sub="kartu">Kartu RFID</button>
+                <button data-sub="sinkron">Sinkronisasi</button>
             </div>
 
             <div id="sub-instansi" class="sub aktif">
@@ -107,6 +108,28 @@
                 </table>
             </div>
 
+            <div id="sub-sinkron" class="sub">
+                <div class="peringatan"><b>Data pribadi.</b> Berkas ekspor kartu berisi NISN dan nama siswa. Simpan di
+                    lokasi aman, jangan di folder repositori atau rilis publik, dan hapus setelah dipakai.</div>
+                <h3>Ekspor</h3>
+                <div class="form-baris">
+                    <button id="sk-xlsx" class="utama">Ekspor Master (Excel)</button>
+                    <button id="sk-csv-kelas">Ekspor Kelas (CSV)</button>
+                    <button id="sk-csv-kartu">Ekspor Kartu (CSV)</button>
+                </div>
+                <h3>Template impor kosong</h3>
+                <div class="form-baris">
+                    <button id="sk-tpl-xlsx">Template Excel</button>
+                    <button id="sk-tpl-kelas">Template CSV Kelas</button>
+                    <button id="sk-tpl-kartu">Template CSV Kartu</button>
+                </div>
+                <h3>Impor</h3>
+                <div class="form-baris"><button id="sk-impor" class="utama">Impor Master...</button></div>
+                <p class="kecil">Impor selalu menampilkan pratinjau dulu dan tidak menulis apa pun sebelum Anda menekan
+                    Terapkan. CSV yang dibuka lalu disimpan ulang di Excel bisa kehilangan nol di depan; UID tetap
+                    dinormalkan saat impor, tetapi NISN pendek akan diberi peringatan. Logo, port serial, dan ambang HID
+                    tidak ikut disinkronkan.</p>
+            </div>
             <div id="sub-kartu" class="sub">
                 <div class="form-baris">
                     <select id="c-kelas"></select>
@@ -180,6 +203,7 @@
                         <option>kelas</option>
                         <option>kartu</option>
                         <option>pengaturan</option>
+                                                <option>master</option>
                         <option>hari</option>
                     </select>
                     <button id="ra-cari" class="utama">Tampilkan</button>
@@ -248,6 +272,7 @@
     <script src="js/master.js"></script>
     <script src="js/riwayat.js"></script>
     <script src="js/ekspor.js"></script>
+        <script src="js/sinkron.js"></script>
     <script src="js/main.js"></script>
     <script>
         document.getElementById("link-footer").addEventListener("click", function (e) {

@@ -575,3 +575,58 @@ button.bahaya:hover:not(:disabled) {
 .kotak label {
     margin: 12px 0
 }
+
+/* Sinkronisasi */
+.peringatan {
+    padding: 10px 14px;
+    margin: 12px 0;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius);
+    color: #78350f;
+}
+
+#sub-sinkron {
+    max-width: 760px
+}
+
+#sub-sinkron h3 {
+    margin: 22px 0 0;
+    font-size: 15px
+}
+
+#modal label.cek {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400
+}
+
+#modal label.cek input {
+    display: inline-block;
+    width: auto;
+    margin: 0
+}
+
+.pratinjau-wadah {
+    max-height: 260px;
+    overflow: auto;
+    margin: 10px 0
+}
+
+.pratinjau-wadah th,
+.pratinjau-wadah td {
+    padding: 6px 10px;
+    font-size: 13px
+}
+
+#im-ok {
+    color: #fff;
+    background: var(--hijau);
+    border-color: var(--hijau)
+}
+
+#im-ok:hover:not(:disabled) {
+    background: var(--hijau-tua);
+    border-color: var(--hijau-tua)
+}
