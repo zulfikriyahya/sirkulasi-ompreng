@@ -217,7 +217,7 @@ Linux dibangun di Linux (CGO). Windows bisa dibangun dari Linux (tanpa CGO).
 Prasyarat build (Debian/Ubuntu):
 
 ```bash
-sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev nsis imagemagick
+sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev nsis imagemagick upx-ucl
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 ```
@@ -237,11 +237,12 @@ go vet ./... && go test ./... || exit 1
 rm -rf dist && mkdir -p dist
 export VERSION=0.3.2
 LDF="-X mbg/internal/versi.Versi=${VERSION}"
+UPXF="--best --lzma"
 
-wails build -clean -ldflags "$LDF"
+wails build -clean -trimpath -upx -upxflags "$UPXF" -ldflags "$LDF"
 cp build/bin/mbg dist/mbg-linux-amd64
 
-wails build -clean -platform windows/amd64 -nsis -webview2 embed -ldflags "$LDF"
+wails build -clean -trimpath -platform windows/amd64 -nsis -webview2 embed -upx -upxflags "$UPXF" -ldflags "$LDF"
 cp build/bin/mbg-amd64-installer.exe dist/
 
 nfpm package -p deb -t dist/
@@ -249,6 +250,9 @@ nfpm package -p rpm -t dist/
 
 (cd dist && sha256sum mbg-linux-amd64 mbg_*.deb mbg-*.rpm mbg-amd64-installer.exe > checksums.txt)
 ```
+Binary dikompres dengan UPX (`--best --lzma`), jadi ukurannya kecil. Pada Windows, binary terkompres UPX kadang
+dianggap mencurigakan oleh antivirus (false positive); uji di komputer target sebelum rilis. Jika bermasalah,
+hapus `-upx -upxflags "$UPXF"` dari perintah build Windows.
 
 Hasil di `dist/`: `mbg-linux-amd64`, `.deb`, `.rpm`, `mbg-amd64-installer.exe`, dan `checksums.txt` (dipakai fitur pembaruan untuk verifikasi SHA256).
 
